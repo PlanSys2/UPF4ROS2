@@ -1,5 +1,7 @@
-uint32 start
-uint32 duration
+string problem
 
 upf_msgs/InstantaneousAction[<=1] instantaneous_action
 upf_msgs/DurativeAction[<=1] durative_action
+---
+bool success
+string message

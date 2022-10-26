@@ -16,6 +16,10 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Parameter.msg"
   "msg/Problem.msg"
   "msg/TimedFluent.msg" 
+  "srv/AddAction.srv"
+  "srv/AddFluent.srv"
+  "srv/AddObject.srv"
+  "srv/AddProblem.srv"
   DEPENDENCIES builtin_interfaces
 )
 
