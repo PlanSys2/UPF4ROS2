@@ -1,5 +1,0 @@
-uint32 start
-uint32 duration
-
-upf_msgs/InstantaneousAction[<=1] instantaneous_action
-upf_msgs/DurativeAction[<=1] durative_action

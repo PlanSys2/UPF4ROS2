@@ -1,0 +1,11 @@
+## A plan request to the engine.
+## The engine replies with a stream of N `Answer` messages where:
+##  - the first (N-1) message are of type `IntermediateReport`
+##  - the last message is of type `FinalReport`
+
+upf_msgs/PDDLPlanRequest plan_request
+---
+bool success
+string message
+---
+upf_msgs/PlanGenerationResult plan_result
