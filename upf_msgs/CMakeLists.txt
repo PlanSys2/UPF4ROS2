@@ -7,15 +7,15 @@ find_package(builtin_interfaces REQUIRED)
 find_package(rosidl_default_generators REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
-  "msg/DurativeAction.msg"
-  "msg/InstantaneousAction.msg"
+  "msg/Expression.msg"
+  "msg/Atom.msg"
+  "msg/Real.msg"
+  "msg/ActionInstance.msg"
   "msg/Plan.msg"
-  "msg/TimedAction.msg"
-  "msg/UserType.msg"
-  "msg/Fluent.msg"
-  "msg/Parameter.msg"
-  "msg/Problem.msg"
-  "msg/TimedFluent.msg" 
+  "msg/PDDLPlanRequest.msg"
+  "msg/LogMessage.msg"
+  "msg/PlanGenerationResult.msg"
+  "action/PDDLPlanOneShot.action"
   DEPENDENCIES builtin_interfaces
 )
 
