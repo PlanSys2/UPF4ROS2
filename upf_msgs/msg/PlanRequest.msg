@@ -1,12 +1,4 @@
-# Problem that should be solved.
-
-# Specify if the domain/model string contains a file path, or the content
-uint8 FILE=0
-uint8 RAW=1
-uint8 mode
-
-string domain
-string problem
+upf_msgs/Problem problem
 
 uint8 SATISFIABLE=0
 uint8 SOLVED_OPTIMALLY=1
