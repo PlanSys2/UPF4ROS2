@@ -1,4 +1,0 @@
-upf_msgs/Problem problem
----
-bool success
-string message
