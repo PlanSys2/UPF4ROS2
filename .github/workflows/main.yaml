@@ -23,7 +23,7 @@ jobs:
       - name: Install tamer
         run: pip install unified_planning[tamer]
       - name: Create custom repos
-        run: wget -O /tmp/all.repos https://raw.githubusercontent.com/PlanSys2/UPF4ROS2/upf.repos  
+        run: wget -O /tmp/all.repos https://raw.githubusercontent.com/PlanSys2/UPF4ROS2/main/upf.repos
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.2.6
         with:
