@@ -19,7 +19,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-colcon-coveragepy-result libfl-dev
+        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-colcon-coveragepy-result libfl-dev pip
       - name: Install tamer
         run: pip install unified_planning[tamer]
       - name: Create custom repos
