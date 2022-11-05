@@ -14,6 +14,7 @@
 
 
 class handles:
+
     def __init__(self, *what):
         self.what = what
 
@@ -23,11 +24,12 @@ class handles:
 
 
 class Converter:
+
     def __init__(self):
         self.functions = {}
         for k in dir(self):
             v = getattr(self, k)
-            if hasattr(v, "_what"):
+            if hasattr(v, '_what'):
                 for x in v._what:
                     self.functions[x] = v
 

@@ -13,208 +13,209 @@
 # limitations under the License.
 #
 
-# This module started from the proto_writer.py module from the 
+# This module started from the proto_writer.py module from the
 # AIPlan4EU project, with the same license
 
 # type: ignore[valid-type]
 import fractions
-from itertools import product
+# from itertools import product
 from typing import List
 
 from unified_planning import model
-import unified_planning.model.htn
-import unified_planning.model.walkers as walkers
-from unified_planning.model.types import domain_size, domain_item
-from unified_planning.exceptions import UPException
 from unified_planning.engines import PlanGenerationResult
-from upf4ros2.converter import Converter, handles
+from unified_planning.exceptions import UPException
+import unified_planning.model.htn
+# from unified_planning.model.types import domain_size, domain_item
 from unified_planning.model.operators import (
     BOOL_OPERATORS,
     IRA_OPERATORS,
-    RELATIONS,
     OperatorKind,
+    RELATIONS,
 )
 from unified_planning.model.timing import TimepointKind
+import unified_planning.model.walkers as walkers
+from upf4ros2.converter import Converter, handles
 
-from upf_msgs.msg import *
+from upf_msgs import msg
 
 
 def map_operator(op: int) -> str:
     if op == OperatorKind.PLUS:
-        return "up:plus"
+        return 'up:plus'
     elif op == OperatorKind.MINUS:
-        return "up:minus"
+        return 'up:minus'
     elif op == OperatorKind.TIMES:
-        return "up:times"
+        return 'up:times'
     elif op == OperatorKind.DIV:
-        return "up:div"
+        return 'up:div'
     elif op == OperatorKind.LE:
-        return "up:le"
+        return 'up:le'
     elif op == OperatorKind.LT:
-        return "up:lt"
+        return 'up:lt'
     elif op == OperatorKind.EQUALS:
-        return "up:equals"
+        return 'up:equals'
     elif op == OperatorKind.AND:
-        return "up:and"
+        return 'up:and'
     elif op == OperatorKind.OR:
-        return "up:or"
+        return 'up:or'
     elif op == OperatorKind.NOT:
-        return "up:not"
+        return 'up:not'
     elif op == OperatorKind.IMPLIES:
-        return "up:implies"
+        return 'up:implies'
     elif op == OperatorKind.IFF:
-        return "up:iff"
+        return 'up:iff'
     elif op == OperatorKind.EXISTS:
-        return "up:exists"
+        return 'up:exists'
     elif op == OperatorKind.FORALL:
-        return "up:forall"
-    raise ValueError(f"Unknown operator `{op}`")
+        return 'up:forall'
+    raise ValueError(f'Unknown operator `{op}`')
 
 
 def interface_type(tpe: model.Type) -> str:
     if tpe.is_bool_type():
-        return "up:bool"
+        return 'up:bool'
     elif tpe.is_time_type():
-        return "up:time"
+        return 'up:time'
     elif tpe.is_int_type() or tpe.is_real_type():
-        return f"up:{tpe}"
+        return f'up:{tpe}'
     elif isinstance(tpe, model.types._UserType):
         return str(tpe.name)
 
 
 class FNode2ROS2(walkers.DagWalker):
+
     def __init__(self, ros2_writer):
         super().__init__()
         self._ros2_writer = ros2_writer
 
-    def convert(self, expression: model.FNode) -> Expression:
+    def convert(self, expression: model.FNode) -> msg.Expression:
         return self.walk(expression)
 
     def walk_bool_constant(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_bool_constant')
-        return Expression()
+        return msg.Expression()
         # return Expression(
         #     atom=proto.Atom(boolean=expression.bool_constant_value()),
         #     list=[],
-        #     kind=proto.ExpressionKind.Value("CONSTANT"),
-        #     type="up:bool",
+        #     kind=proto.ExpressionKind.Value('CONSTANT'),
+        #     type='up:bool',
         # )
 
     def walk_int_constant(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_int_constant')
-        return Expression()
+        return msg.Expression()
         # return Expression(
         #    atom=proto.Atom(int=expression.int_constant_value()),
         #    list=[],
-        #    kind=proto.ExpressionKind.Value("CONSTANT"),
-        #    type="up:integer",
-        # 
+        #    kind=proto.ExpressionKind.Value('CONSTANT'),
+        #    type='up:integer',
+        #
 
     def walk_real_constant(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_real_constant')
-        item = ExpressionItem()
-        real = Real()
+        item = msg.ExpressionItem()
+        real = msg.Real()
         real.numerator = expression.real_constant_value().numerator
         real.denominator = expression.real_constant_value().denominator
         item.atom.real_atom.append(real)
-        item.type = "up:real"
-        item.kind = ExpressionItem.CONSTANT
-        ret = Expression()
+        item.type = 'up:real'
+        item.kind = msg.ExpressionItem.CONSTANT
+        ret = msg.Expression()
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
 
     def walk_param_exp(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
-        item = ExpressionItem()
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
+        item = msg.ExpressionItem()
         item.atom.symbol_atom.append(expression.parameter().name)
         item.type = interface_type(expression.parameter().type)
-        item.kind = ExpressionItem.PARAMETER
-        ret = Expression()
+        item.kind = msg.ExpressionItem.PARAMETER
+        ret = msg.Expression()
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
 
     def walk_variable_exp(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_variable_exp')
-        return Expression()
+        return msg.Expression()
         # return Expression(
         #     atom=proto.Atom(symbol=expression.variable().name),
         #     list=[],
-        #     kind=proto.ExpressionKind.Value("VARIABLE"),
+        #     kind=proto.ExpressionKind.Value('VARIABLE'),
         #     type=proto_type(expression.variable().type),
         # )
 
     def walk_object_exp(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
-        item = ExpressionItem()
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
+        item = msg.ExpressionItem()
         item.atom.symbol_atom.append(expression.object().name)
         item.type = interface_type(expression.object().type)
-        item.kind = ExpressionItem.CONSTANT
-        ret = Expression()
+        item.kind = msg.ExpressionItem.CONSTANT
+        ret = msg.Expression()
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
 
     def walk_timing_exp(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_object_exp')
-        return Expression()
+        return msg.Expression()
         # timing = expression.timing()
         # tp = timing.timepoint
         # if timing.timepoint.container is not None:
         #     args = [
         #         Expression(
         #             atom=proto.Atom(symbol=timing.timepoint.container),
-        #             type="up:container",
-        #             kind=proto.ExpressionKind.Value("CONTAINER_ID"),
+        #             type='up:container',
+        #             kind=proto.ExpressionKind.Value('CONTAINER_ID'),
         #         )
         #     ]
         # else:
         #     args = []
         # if tp.kind == TimepointKind.GLOBAL_START:
-        #     fn = "up:global_start"
+        #     fn = 'up:global_start'
         # elif tp.kind == TimepointKind.GLOBAL_END:
-        #     fn = "up:global_end"
+        #     fn = 'up:global_end'
         # elif tp.kind == TimepointKind.START:
-        #     fn = "up:start"
+        #     fn = 'up:start'
         # elif tp.kind == TimepointKind.END:
-        #     fn = "up:end"
+        #     fn = 'up:end'
         # else:
-        #     raise ValueError(f"Unknown timepoint kind: {tp.kind}")
+        #     raise ValueError(f'Unknown timepoint kind: {tp.kind}')
         # fn_exp = Expression(
         #     atom=proto.Atom(symbol=fn),
-        #     kind=proto.ExpressionKind.Value("FUNCTION_SYMBOL"),
+        #     kind=proto.ExpressionKind.Value('FUNCTION_SYMBOL'),
         # )
         # tp_exp = Expression(
         #     list=[fn_exp] + args,
-        #     type="up:time",
-        #     kind=proto.ExpressionKind.Value("FUNCTION_APPLICATION"),
+        #     type='up:time',
+        #     kind=proto.ExpressionKind.Value('FUNCTION_APPLICATION'),
         # )
         # assert timing.delay == 0
         # return tp_exp
 
     def walk_fluent_exp(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_fluent_exp')
-        return Expression()
+        return msg.Expression()
         # sub_list = []
         # sub_list.append(
         #     Expression(
         #         atom=proto.Atom(symbol=expression.fluent().name),
-        #         kind=proto.ExpressionKind.Value("FLUENT_SYMBOL"),
+        #         kind=proto.ExpressionKind.Value('FLUENT_SYMBOL'),
         #         type=proto_type(expression.fluent().type),
         #     )
         # )
@@ -222,52 +223,50 @@ class FNode2ROS2(walkers.DagWalker):
         # return Expression(
         #     atom=None,
         #     list=sub_list,
-        #     kind=proto.ExpressionKind.Value("STATE_VARIABLE"),
+        #     kind=proto.ExpressionKind.Value('STATE_VARIABLE'),
         #     type=proto_type(expression.fluent().type),
         # )
 
     @walkers.handles(BOOL_OPERATORS.union(IRA_OPERATORS).union(RELATIONS))
     def walk_operator(
-        self, expression: model.FNode, args: List[Expression]
-    ) -> Expression:
+        self, expression: model.FNode, args: List[msg.Expression]
+    ) -> msg.Expression:
         print('walk_operator')
-        return Expression()
-        #sub_list = []
-        #sub_list.append(
-        #    Expression(
-        #        atom=proto.Atom(symbol=map_operator(expression.node_type)),
-        #        list=[],
-        #        kind=proto.ExpressionKind.Value("FUNCTION_SYMBOL"),
-        #        type="up:operator",
-        #    )
-        #)
-        ## forall/exists: add the declared variables from the payload to the beginning of the parameter list.
-        #if expression.is_exists() or expression.is_forall():
-        #    sub_list.extend(
-        #        [self._protobuf_writer.convert(p) for p in expression.variables()]
-        #    )
+        return msg.Expression()
+        # sub_list = []
+        # sub_list.append(
+        #     Expression(
+        #         atom=proto.Atom(symbol=map_operator(expression.node_type)),
+        #         list=[],
+        #         kind=proto.ExpressionKind.Value('FUNCTION_SYMBOL'),
+        #         type='up:operator',
+        #     )
+        # )
+        # # forall/exists: add the declared variables from the payload to
+        # # the beginning of the parameter list.
+        # if expression.is_exists() or expression.is_forall():
+        #     sub_list.extend(
+        #         [self._protobuf_writer.convert(p) for p in expression.variables()]
+        #     )
         #
-        #sub_list.extend(args)
-        #return Expression(
-        #    atom=None,
-        #    list=sub_list,
-        #    kind=proto.ExpressionKind.Value("FUNCTION_APPLICATION"),
-        #    type="",
-        #)
+        # sub_list.extend(args)
+        # return Expression(
+        #     atom=None,
+        #     list=sub_list,
+        #     kind=proto.ExpressionKind.Value('FUNCTION_APPLICATION'),
+        #     type='',
+        # )
 
 
 # def map_feature(feature: str) -> Feature:
 #     pb_feature = proto.Feature.Value(feature)
 #     if pb_feature is None:
-#         raise ValueError(f"Cannot convert feature to protobuf {feature}")
+#         raise ValueError(f'Cannot convert feature to protobuf {feature}')
 #     return pb_feature
 
 
 class ROS2InterfaceWriter(Converter):
-    """
-    ROS2InterfaceWriter: This class uses the convert method to take a unified_planning Problem instance
-    and return the equivalent ROS 2 Interfaces representation.
-    """
+    """Class to convert from unified_planning Problem instance to ROS 2 Interfaces."""
 
     def __init__(self):
         super().__init__()
@@ -276,66 +275,69 @@ class ROS2InterfaceWriter(Converter):
     @handles(model.Fluent)
     def _convert_fluent(
         self, fluent: model.Fluent, problem: model.Problem
-    ) -> Fluent:
+    ) -> msg.Fluent:
         name = fluent.name
         sig = [self.convert(t) for t in fluent.signature]
 
-        ret = Fluent()
+        ret = msg.Fluent()
         ret.name = name
-        ret.value_type=interface_type(fluent.type)
+        ret.value_type = interface_type(fluent.type)
         ret.parameters = sig
-        ret.default_value = self.convert(problem.fluents_defaults[fluent]) if fluent in problem.fluents_defaults else Expression()
+        if fluent in problem.fluents_defaults:
+            ret.default_value = self.convert(problem.fluents_defaults[fluent])
+        else:
+            ret.default_value = msg.Expression()
         return ret
- 
+
     @handles(model.Object)
-    def _convert_object(self, obj: model.Object) -> ObjectDeclaration:
-        ret = ObjectDeclaration()
+    def _convert_object(self, obj: model.Object) -> msg.ObjectDeclaration:
+        ret = msg.ObjectDeclaration()
         ret.name = obj.name
         ret.type = interface_type(obj.type)
         return ret
 
     @handles(model.FNode)
-    def _convert_fnode(self, exp: model.FNode) -> Expression:
+    def _convert_fnode(self, exp: model.FNode) -> msg.Expression:
         return self._fnode2ros2.convert(exp)
- 
+
     @handles(model.types._BoolType)
-    def _convert_bool_type(self, tpe: model.types._BoolType) -> TypeDeclaration:
-        ret = TypeDeclaration()
+    def _convert_bool_type(self, tpe: model.types._BoolType) -> msg.TypeDeclaration:
+        ret = msg.TypeDeclaration()
         ret.type_name = interface_type(tpe)
         return ret
 
     @handles(model.types._UserType)
-    def _convert_user_type(self, t: model.types._UserType) -> TypeDeclaration:
-        ret = TypeDeclaration()
+    def _convert_user_type(self, t: model.types._UserType) -> msg.TypeDeclaration:
+        ret = msg.TypeDeclaration()
         ret.type_name = interface_type(t)
-        ret.parent_type="" if t.father is None else interface_type(t.father)
+        ret.parent_type = '' if t.father is None else interface_type(t.father)
         return ret
 
     @handles(model.types._IntType)
-    def _convert_integer_type(self, t: model.types._IntType) -> TypeDeclaration:
-        ret = TypeDeclaration()
+    def _convert_integer_type(self, t: model.types._IntType) -> msg.TypeDeclaration:
+        ret = msg.TypeDeclaration()
         ret.type_name = interface_type(t)
         return ret
 
     @handles(model.types._RealType)
-    def _convert_real(self, t: model.types._RealType) -> TypeDeclaration:
-        ret = TypeDeclaration()
-        ret.type_name = interface_type(t)     
+    def _convert_real(self, t: model.types._RealType) -> msg.TypeDeclaration:
+        ret = msg.TypeDeclaration()
+        ret.type_name = interface_type(t)
         return ret
 
     @handles(model.Effect)
-    def _convert_effect(self, effect: model.Effect) -> Effect:
+    def _convert_effect(self, effect: model.Effect) -> msg.Effect:
         kind = None
         if effect.is_assignment():
-            kind = EffectExpression.ASSIGN
+            kind = msg.EffectExpression.ASSIGN
         elif effect.is_increase():
-            kind = EffectExpression.INCREASE
+            kind = msg.EffectExpression.INCREASE
         elif effect.is_decrease():
-            kind = EffectExpression.DECREASE
+            kind = msg.EffectExpression.DECREASE
         else:
-            raise ValueError(f"Unsupported effect: {effect}")
+            raise ValueError(f'Unsupported effect: {effect}')
 
-        ret = Effect()
+        ret = msg.Effect()
         ret.effect.kind = kind
         ret.effect.fluent = self.convert(effect.fluent)
         ret.effect.value = self.convert(effect.value)
@@ -348,7 +350,7 @@ class ROS2InterfaceWriter(Converter):
 #     ) -> Action:
 #         effects = []
 #         conditions = []
-# 
+#
 #         for cond in a.preconditions:
 #             conditions.append(
 #                 proto.Condition(
@@ -356,24 +358,24 @@ class ROS2InterfaceWriter(Converter):
 #                     span=None,
 #                 )
 #             )
-# 
+#
 #         for eff in a.effects:
 #             effects.append(proto.Effect(effect=self.convert(eff), occurrence_time=None))
-# 
+#
 #         ret = Action()
 #         ret.name=a.name
 #         ret.parameters=[self.convert(p) for p in a.parameters]
 #         ret.duration=None
 #         ret.conditions=conditions
 #         ret.effects=effects
-#         
+#
 #         return ret
-# 
+#
 #     @handles(model.DurativeAction)
 #     def _convert_durative_action(self, a: model.DurativeAction) -> Action:
 #         effects = []
 #         conditions = []
-# 
+#
 #         for span, cond in a.conditions.items():
 #             span = self.convert(span)
 #             for c in cond:
@@ -392,79 +394,79 @@ class ROS2InterfaceWriter(Converter):
 #                         occurrence_time=ot,
 #                     )
 #                 )
-#     
+#
 #         ret = Action()
 #         ret.name=a.name
 #         ret.parameters=[self.convert(p) for p in a.parameters]
 #         ret.duration=self.convert(a.duration)
 #         ret.conditions=conditions
 #         ret.effects=effects
-#         
+#
 #         return ret
-# 
+#
     @handles(model.timing.Timepoint)
-    def _convert_timepoint(self, tp: model.timing.Timepoint) -> Timepoint:
+    def _convert_timepoint(self, tp: model.timing.Timepoint) -> msg.Timepoint:
         if tp.kind == TimepointKind.START:
-            kind = TimepointKind.START
+            kind = msg.Timepoint.START
         elif tp.kind == TimepointKind.END:
-            kind = Timepoint.END
+            kind = msg.Timepoint.END
         elif tp.kind == TimepointKind.GLOBAL_START:
-            kind = Timepoint.GLOBAL_START
+            kind = msg.Timepoint.GLOBAL_START
         elif tp.kind == TimepointKind.GLOBAL_END:
-            kind = Timepoint.GLOBAL_END
-        
-        ret = Timepoint()
+            kind = msg.Timepoint.GLOBAL_END
+
+        ret = msg.Timepoint()
         ret.kind = kind
-        ret.container_id=tp.container
+        ret.container_id = tp.container
         return ret
 
     @handles(model.Timing)
-    def _convert_timing(self, timing: model.Timing) -> Timing:
-        ret = Timing()
-        ret.timepoint=self.convert(timing._timepoint)
-        ret.delay=self.convert(fractions.Fraction(timing.delay))
+    def _convert_timing(self, timing: model.Timing) -> msg.Timing:
+        ret = msg.Timing()
+        ret.timepoint = self.convert(timing._timepoint)
+        ret.delay = self.convert(fractions.Fraction(timing.delay))
         return ret
- 
+
     @handles(fractions.Fraction)
-    def _convert_fraction(self, fraction: fractions.Fraction) -> Real:
-        ret = Real()
-        ret.numerator=fraction.numerator
-        ret.denominator=fraction.denominator
+    def _convert_fraction(self, fraction: fractions.Fraction) -> msg.Real:
+        ret = msg.Real()
+        ret.numerator = fraction.numerator
+        ret.denominator = fraction.denominator
         return ret
 
     @handles(model.timing.Interval)
-    def _convert_interval(self, interval: model.timing.Interval) -> Interval:
-        ret = Interval()
+    def _convert_interval(self, interval: model.timing.Interval) -> msg.Interval:
+        ret = msg.Interval()
 
-        ret.is_left_open=interval.is_left_open()
-        ret.lower=self.convert(interval.lower())
-        ret.is_right_open=interval.is_right_open()
-        ret.upper=self.convert(interval.lower())
+        ret.is_left_open = interval.is_left_open()
+        ret.lower = self.convert(interval.lower())
+        ret.is_right_open = interval.is_right_open()
+        ret.upper = self.convert(interval.lower())
         return ret
 
     @handles(model.TimeInterval)
     def _convert_time_interval(
         self, interval: model.TimeInterval
-    ) -> TimeInterval:
-        ret = TimeInterval()
-        ret.is_left_open=interval.is_left_open()
-        ret.lower=self.convert(interval.lower)
-        ret.is_right_open=interval.is_right_open()
-        ret.upper=self.convert(interval.upper)
+    ) -> msg.TimeInterval:
+        ret = msg.TimeInterval()
+        ret.is_left_open = interval.is_left_open()
+        ret.lower = self.convert(interval.lower)
+        ret.is_right_open = interval.is_right_open()
+        ret.upper = self.convert(interval.upper)
         return ret
 
     @handles(model.DurationInterval)
     def _convert_duration_interval(
         self, interval: model.DurationInterval
-    ) -> Interval:
-        ret = Interval()
-        ret.controllable_in_bounds.is_left_open=interval.is_left_open()
-        ret.controllable_in_bounds.lower=self.convert(interval.lower)
-        ret.controllable_in_bounds.is_right_open=interval.is_right_open()
-        ret.controllable_in_bounds.upper=self.convert(interval.upper)
-        
+    ) -> msg.Interval:
+        ret = msg.Interval()
+        ret.controllable_in_bounds.is_left_open = interval.is_left_open()
+        ret.controllable_in_bounds.lower = self.convert(interval.lower)
+        ret.controllable_in_bounds.is_right_open = interval.is_right_open()
+        ret.controllable_in_bounds.upper = self.convert(interval.upper)
+
         return ret
-# 
+#
 #     @handles(model.htn.Task)
 #     def _convert_abstract_task(
 #         self, task: model.htn.Task
@@ -472,9 +474,9 @@ class ROS2InterfaceWriter(Converter):
 #         ret = AbstractTaskDeclaration()
 #         ret.name=task.name
 #         ret.parameters=[self.convert(p) for p in task.parameters]
-# 
+#
 #         return ret
-# 
+#
 #     @handles(model.htn.ParameterizedTask)
 #     def _convert_parameterized_task(
 #         self, task: model.htn.ParameterizedTask
@@ -487,14 +489,14 @@ class ROS2InterfaceWriter(Converter):
 #             aux.kind = ExpressionKind.PARAMETER
 #             aux.type = interface_type(p.type)
 #             parameters.append(aux)
-# 
+#
 #         ret.Task()
-#         ret.id = ""
+#         ret.id = ''
 #         ret.task_name = task.task.name
 #         ret.parameters = parameters
-# 
+#
 #         return ret
-# 
+#
 #     @handles(model.htn.Subtask)
 #     def _convert_subtask(self, subtask: model.htn.Subtask) -> proto.Task:
 #         return proto.Task(
@@ -502,7 +504,7 @@ class ROS2InterfaceWriter(Converter):
 #             task_name=subtask.task.name,
 #             parameters=[self.convert(p) for p in subtask.parameters],
 #         )
-# 
+#
 #     @handles(model.htn.Method)
 #     def _convert_method(self, method: model.htn.Method) -> proto.Method:
 #         return proto.Method(
@@ -515,7 +517,7 @@ class ROS2InterfaceWriter(Converter):
 #                 proto.Condition(cond=self.convert(c)) for c in method.preconditions
 #             ],
 #         )
-# 
+#
 #     @handles(model.htn.TaskNetwork)
 #     def _convert_task_network(self, tn: model.htn.TaskNetwork) -> proto.TaskNetwork:
 #         return proto.TaskNetwork(
@@ -523,7 +525,7 @@ class ROS2InterfaceWriter(Converter):
 #             subtasks=[self.convert(st) for st in tn.subtasks],
 #             constraints=[self.convert(c) for c in tn.constraints],
 #         )
-# 
+#
 #     def build_hierarchy(
 #         self, problem: model.htn.HierarchicalProblem
 #     ) -> proto.Hierarchy:
@@ -532,7 +534,7 @@ class ROS2InterfaceWriter(Converter):
 #             abstract_tasks=[self.convert(t) for t in problem.tasks],
 #             methods=[self.convert(m) for m in problem.methods],
 #         )
-# 
+#
 #     @handles(model.Problem, model.htn.HierarchicalProblem)
 #     def _convert_problem(self, problem: model.Problem) -> proto.Problem:
 #         goals = [proto.Goal(goal=self.convert(g)) for g in problem.goals]
@@ -540,14 +542,14 @@ class ROS2InterfaceWriter(Converter):
 #             goals += [
 #                 proto.Goal(goal=self.convert(g), timing=self.convert(t)) for g in gs
 #             ]
-# 
-#         problem_name = str(problem.name) if problem.name is not None else ""
+#
+#         problem_name = str(problem.name) if problem.name is not None else ''
 #         hierarchy = None
 #         if isinstance(problem, model.htn.HierarchicalProblem):
 #             hierarchy = self.build_hierarchy(problem)
-# 
+#
 #         return proto.Problem(
-#             domain_name=problem_name + "_domain",
+#             domain_name=problem_name + '_domain',
 #             problem_name=problem_name,
 #             types=[self.convert(t) for t in problem.user_types],
 #             fluents=[self.convert(f, problem) for f in problem.fluents],
@@ -563,7 +565,7 @@ class ROS2InterfaceWriter(Converter):
 #             metrics=[self.convert(m) for m in problem.quality_metrics],
 #             hierarchy=hierarchy,
 #         )
-# 
+#
 #     @handles(model.metrics.MinimizeActionCosts)
 #     def _convert_minimize_action_costs(
 #         self, metric: model.metrics.MinimizeActionCosts
@@ -571,7 +573,7 @@ class ROS2InterfaceWriter(Converter):
 #         action_costs = {}
 #         for action, cost in metric.costs.items():
 #             action_costs[action.name] = self.convert(cost)
-# 
+#
 #         return proto.Metric(
 #             kind=proto.Metric.MINIMIZE_ACTION_COSTS,
 #             action_costs=action_costs,
@@ -579,19 +581,19 @@ class ROS2InterfaceWriter(Converter):
 #             if metric.default is not None
 #             else None,
 #         )
-# 
+#
 #     @handles(model.metrics.MinimizeSequentialPlanLength)
 #     def _convert_minimize_sequential_plan_length(self, _) -> proto.Metric:
 #         return proto.Metric(
 #             kind=proto.Metric.MINIMIZE_SEQUENTIAL_PLAN_LENGTH,
 #         )
-# 
+#
 #     @handles(model.metrics.MinimizeMakespan)
 #     def _convert_minimize_makespan(self, _) -> proto.Metric:
 #         return proto.Metric(
 #             kind=proto.Metric.MINIMIZE_MAKESPAN,
 #         )
-# 
+#
 #     @handles(model.metrics.MinimizeExpressionOnFinalState)
 #     def _convert_minimize_expression_on_final_state(
 #         self, metric: model.metrics.MinimizeExpressionOnFinalState
@@ -600,7 +602,7 @@ class ROS2InterfaceWriter(Converter):
 #             kind=proto.Metric.MINIMIZE_EXPRESSION_ON_FINAL_STATE,
 #             expression=self.convert(metric.expression),
 #         )
-# 
+#
 #     @handles(model.metrics.MaximizeExpressionOnFinalState)
 #     def _convert_maximize_expression_on_final_state(
 #         self, metric: model.metrics.MaximizeExpressionOnFinalState
@@ -609,7 +611,7 @@ class ROS2InterfaceWriter(Converter):
 #             kind=proto.Metric.MAXIMIZE_EXPRESSION_ON_FINAL_STATE,
 #             expression=self.convert(metric.expression),
 #         )
-# 
+#
 #     @handles(model.metrics.Oversubscription)
 #     def _convert_oversubscription_metric(
 #         self, metric: model.metrics.Oversubscription
@@ -625,10 +627,10 @@ class ROS2InterfaceWriter(Converter):
 #             kind=proto.Metric.OVERSUBSCRIPTION,
 #             goals=goals,
 #         )
- 
+
     @handles(model.Parameter)
-    def _convert_action_parameter(self, p: model.Parameter) -> Parameter:
-        ret = Parameter()
+    def _convert_action_parameter(self, p: model.Parameter) -> msg.Parameter:
+        ret = msg.Parameter()
         ret.name = p.name
         ret.type = interface_type(p.type)
         return ret
@@ -641,47 +643,47 @@ class ROS2InterfaceWriter(Converter):
 #         return Expression(
 #             atom=proto.Atom(symbol=variable.name),
 #             list=[],
-#             kind=proto.ExpressionKind.Value("VARIABLE"),
+#             kind=proto.ExpressionKind.Value('VARIABLE'),
 #             type=proto_type(variable.type),
 #         )
-# 
+
     @handles(unified_planning.plans.ActionInstance)
     def _convert_action_instance(
         self, a: unified_planning.plans.ActionInstance, start_time=None, end_time=None
-    ) -> ActionInstance:
+    ) -> msg.ActionInstance:
         parameters = []
         for param in a.actual_parameters:
             # The parameters are atoms
             parameters.append(self.convert(param).expressions[0].atom)
-        ret = ActionInstance()
+        ret = msg.ActionInstance()
         ret.action_name = a.action.name
         ret.parameters = parameters
         if bool(start_time) and bool(end_time):
             ret.start_time = start_time
-            ret.end_time=end_time
+            ret.end_time = end_time
             ret.time_triggered = True
         else:
             ret.time_triggered = False
         return ret
 
     @handles(str)
-    def _convert_str_atom(self, s: str) -> Atom:
-        ret = Atom()
+    def _convert_str_atom(self, s: str) -> msg.Atom:
+        ret = msg.Atom()
         ret.symbol_atom = [s]
         return ret
 
     @handles(unified_planning.plans.SequentialPlan)
     def _convert_sequential_plan(
         self, plan: unified_planning.plans.SequentialPlan
-    ) -> Plan:
-        ret = Plan()
+    ) -> msg.Plan:
+        ret = msg.Plan()
         ret.actions = [self.convert(a) for a in plan.actions]
         return ret
 
     @handles(unified_planning.plans.TimeTriggeredPlan)
     def _convert_time_triggered_plan(
         self, plan: unified_planning.plans.TimeTriggeredPlan
-    ) -> Plan:
+    ) -> msg.Plan:
         action_instances = []
 
         for a in plan.timed_actions:
@@ -691,22 +693,21 @@ class ROS2InterfaceWriter(Converter):
                 a[1], start_time=start_time, end_time=end_time
             )
             action_instances.append(instance)
-        ret = Plan()
+        ret = msg.Plan()
         ret.actions = action_instances
         return ret
 
-
-    @handles(unified_planning.engines.PlanGenerationResult)
+    @handles(PlanGenerationResult)
     def _convert_plan_generation_result(
-        self, result: unified_planning.engines.PlanGenerationResult
-    ) -> PlanGenerationResult:
+        self, result: PlanGenerationResult
+    ) -> msg.PlanGenerationResult:
         log_messages = None
         if result.log_messages is not None:
             log_messages = [self.convert(log) for log in result.log_messages]
-        
-        ret = PlanGenerationResult()
+
+        ret = msg.PlanGenerationResult()
         ret.status = self.convert(result.status)
-        ret.plan=self.convert(result.plan)
+        ret.plan = self.convert(result.plan)
         ret.engine_name = result.engine_name
         if bool(result.metrics):
             ret.metric_names = list(result.metrics.keys())
@@ -723,62 +724,62 @@ class ROS2InterfaceWriter(Converter):
             status
             == unified_planning.engines.PlanGenerationResultStatus.SOLVED_SATISFICING
         ):
-            return PlanGenerationResult.SOLVED_SATISFICING
+            return msg.PlanGenerationResult.SOLVED_SATISFICING
 
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.SOLVED_OPTIMALLY
         ):
-            return PlanGenerationResult.SOLVED_OPTIMALLY
+            return msg.PlanGenerationResult.SOLVED_OPTIMALLY
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.UNSOLVABLE_PROVEN
         ):
-            return PlanGenerationResult.UNSOLVABLE_PROVEN
+            return msg.PlanGenerationResult.UNSOLVABLE_PROVEN
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.UNSOLVABLE_INCOMPLETELY
         ):
-            return PlanGenerationResult.UNSOLVABLE_INCOMPLETELY
+            return msg.PlanGenerationResult.UNSOLVABLE_INCOMPLETELY
         elif status == unified_planning.engines.PlanGenerationResultStatus.TIMEOUT:
-            return PlanGenerationResult.TIMEOUT
+            return msg.PlanGenerationResult.TIMEOUT
         elif status == unified_planning.engines.PlanGenerationResultStatus.MEMOUT:
-            return PlanGenerationResult.MEMOUT
+            return msg.PlanGenerationResult.MEMOUT
         elif (
             status == unified_planning.engines.PlanGenerationResultStatus.INTERNAL_ERROR
         ):
-            return PlanGenerationResult.INTERNAL_ERROR
+            return msg.PlanGenerationResult.INTERNAL_ERROR
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.UNSUPPORTED_PROBLEM
         ):
 
-            return PlanGenerationResult.UNSUPPORTED_PROBLEM
+            return msg.PlanGenerationResult.UNSUPPORTED_PROBLEM
         elif status == unified_planning.engines.PlanGenerationResultStatus.INTERMEDIATE:
-            return PlanGenerationResult.INTERMEDIATE
+            return msg.PlanGenerationResult.INTERMEDIATE
         else:
-            raise ValueError("Unknown status: {}".format(status))
+            raise ValueError('Unknown status: {}'.format(status))
 
     @handles(unified_planning.engines.LogMessage)
     def _convert_log_messages(
         self, log: unified_planning.engines.LogMessage
-    ) -> LogMessage:
+    ) -> msg.LogMessage:
         if log.level == unified_planning.engines.LogLevel.INFO:
-            level = LogMessage.INFO
+            level = msg.LogMessage.INFO
         elif log.level == unified_planning.engines.LogLevel.WARNING:
-            level = LogLevel.WARNING
+            level = msg.LogLevel.WARNING
         elif log.level == unified_planning.engines.LogLevel.ERROR:
-            level = LogMessage.ERROR
+            level = msg.LogMessage.ERROR
         elif log.level == unified_planning.engines.LogLevel.DEBUG:
-            level = LogMessage.DEBUG
+            level = msg.LogMessage.DEBUG
         else:
-            raise UPException(f"Unknown log level: {log.level}")
+            raise UPException(f'Unknown log level: {log.level}')
 
-        ret = LogMessage()
+        ret = msg.LogMessage()
         ret.level = level
         ret.message = str(log.message)
         return ret
-# 
+#
 #     @handles(unified_planning.engines.CompilerResult)
 #     def _convert_compiler_result(
 #         self, result: unified_planning.engines.CompilerResult
@@ -817,7 +818,7 @@ class ROS2InterfaceWriter(Converter):
 #             log_messages=[self.convert(log) for log in log_messages],
 #             engine=proto.Engine(name=result.engine_name),
 #         )
-# 
+#
 #     @handles(unified_planning.engines.ValidationResult)
 #     def _convert_validation_result(
 #         self, result: unified_planning.engines.ValidationResult
@@ -827,14 +828,14 @@ class ROS2InterfaceWriter(Converter):
 #             log_messages=[self.convert(log) for log in result.log_messages],
 #             engine=proto.Engine(name=result.engine_name),
 #         )
-# 
+#
 #     @handles(unified_planning.engines.ValidationResultStatus)
 #     def _convert_validation_result_status(
 #         self, status: unified_planning.engines.ValidationResultStatus
 #     ) -> proto.ValidationResult.ValidationResultStatus:
 #         if status == unified_planning.engines.ValidationResultStatus.VALID:
-#             return proto.ValidationResult.ValidationResultStatus.Value("VALID")
+#             return proto.ValidationResult.ValidationResultStatus.Value('VALID')
 #         elif status == unified_planning.engines.ValidationResultStatus.INVALID:
-#             return proto.ValidationResult.ValidationResultStatus.Value("INVALID")
+#             return proto.ValidationResult.ValidationResultStatus.Value('INVALID')
 #         else:
-#             raise UPException(f"Unknown result status: {status}")
+#             raise UPException(f'Unknown result status: {status}')

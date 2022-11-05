@@ -12,27 +12,27 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-import unittest
 import threading
+import unittest
 
-import rclpy
-import rclpy.executors
-from rclpy.duration import Duration
-from rclpy.action import ActionClient
 from ament_index_python.packages import get_package_share_directory
 
-from time import sleep
+import rclpy
+from rclpy.action import ActionClient
+import rclpy.executors
+# from rclpy.duration import Duration
 
+# from time import sleep
+
+from unified_planning import shortcuts
+from unified_planning.io.pddl_reader import PDDLReader
 from upf4ros2 import upf4ros2_main
-from upf_msgs.srv import AddAction, AddProblem
+# from upf_msgs.srv import AddAction, AddProblem
+from upf4ros2.ros2_interface_reader import ROS2InterfaceReader  # type: ignore[attr-defined]
+# from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter  # type: ignore[attr-defined]
 from upf_msgs.action import PDDLPlanOneShot
 from upf_msgs.msg import PDDLPlanRequest
 
-from upf4ros2.ros2_interface_reader import ROS2InterfaceReader  # type: ignore[attr-defined]
-from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter  # type: ignore[attr-defined]
-
-import unified_planning
-from unified_planning.io.pddl_reader import PDDLReader
 
 class TestUPF4ROS2(unittest.TestCase):
 
@@ -41,7 +41,7 @@ class TestUPF4ROS2(unittest.TestCase):
         cls.context = rclpy.context.Context()
         rclpy.init(context=cls.context)
         cls.node = rclpy.create_node('TestUPF4ROS2', context=cls.context)
-        unified_planning.shortcuts.get_env().credits_stream = None
+        shortcuts.get_env().credits_stream = None
 
     @classmethod
     def tearDownClass(cls):
@@ -61,14 +61,18 @@ class TestUPF4ROS2(unittest.TestCase):
 
         goal_msg = PDDLPlanOneShot.Goal()
         goal_msg.plan_request.mode = PDDLPlanRequest.FILE
-        goal_msg.plan_request.domain = get_package_share_directory('upf4ros2') + '/pddl/gripper_domain.pddl'
-        goal_msg.plan_request.problem = get_package_share_directory('upf4ros2') + '/pddl/gripper_problem_0.pddl'
+        goal_msg.plan_request.domain = (get_package_share_directory('upf4ros2')
+                                        + '/pddl/gripper_domain.pddl')
+        goal_msg.plan_request.problem = (get_package_share_directory('upf4ros2')
+                                         + '/pddl/gripper_problem_0.pddl')
 
         reader = PDDLReader()
-        upf_problem = reader.parse_problem(goal_msg.plan_request.domain, goal_msg.plan_request.problem)
+        upf_problem = reader.parse_problem(
+            goal_msg.plan_request.domain,
+            goal_msg.plan_request.problem)
 
         client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShot')
-        
+
         def goal_response_callback(future):
             goal_handle = future.result()
             self.assertTrue(goal_handle.accepted)
@@ -87,7 +91,7 @@ class TestUPF4ROS2(unittest.TestCase):
             self.assertEqual(result.message, '')
 
             node_cli.get_logger().info('Result: success: {0} message:{1}'.
-                format(result.success, result.message))
+                                       format(result.success, result.message))
             rclpy.shutdown()
 
         def feedback_callback(feedback_msg):
@@ -95,8 +99,8 @@ class TestUPF4ROS2(unittest.TestCase):
             pb_reader = ROS2InterfaceReader()
             upf_plan = pb_reader.convert(feedback.plan_result.plan, upf_problem)
             node_cli.get_logger().info('Received feedback: {0}'.
-                format(upf_plan))
-            
+                                       format(upf_plan))
+
             good_plan = '[pick(ball1, rooma, left), move(rooma, roomb), drop(ball1, roomb, left)]'
             self.assertEqual(upf_plan.__repr__(), good_plan)
 
@@ -120,14 +124,18 @@ class TestUPF4ROS2(unittest.TestCase):
 
         goal_msg = PDDLPlanOneShot.Goal()
         goal_msg.plan_request.mode = PDDLPlanRequest.FILE
-        goal_msg.plan_request.domain = get_package_share_directory('upf4ros2') + '/pddl/domain_tt.pddl'
-        goal_msg.plan_request.problem = get_package_share_directory('upf4ros2') + '/pddl/problem_tt_1.pddl'
+        goal_msg.plan_request.domain = (get_package_share_directory('upf4ros2')
+                                        + '/pddl/domain_tt.pddl')
+        goal_msg.plan_request.problem = (get_package_share_directory('upf4ros2')
+                                         + '/pddl/problem_tt_1.pddl')
 
         reader = PDDLReader()
-        upf_problem = reader.parse_problem(goal_msg.plan_request.domain, goal_msg.plan_request.problem)
+        upf_problem = reader.parse_problem(
+            goal_msg.plan_request.domain,
+            goal_msg.plan_request.problem)
 
         client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShot')
-        
+
         def goal_response_callback(future):
             goal_handle = future.result()
             self.assertTrue(goal_handle.accepted)
@@ -146,7 +154,7 @@ class TestUPF4ROS2(unittest.TestCase):
             self.assertEqual(result.message, '')
 
             node_cli.get_logger().info('Result: success: {0} message:{1}'.
-                format(result.success, result.message))
+                                       format(result.success, result.message))
             rclpy.shutdown()
 
         def feedback_callback(feedback_msg):
@@ -154,8 +162,8 @@ class TestUPF4ROS2(unittest.TestCase):
             pb_reader = ROS2InterfaceReader()
             upf_plan = pb_reader.convert(feedback.plan_result.plan, upf_problem)
             node_cli.get_logger().info('Received feedback: {0}'.
-                format(upf_plan))
-            
+                                       format(upf_plan))
+
             good_plan = '[(Fraction(0, 1), move(leia, kitchen, bedroom), Fraction(5, 1))]'
             self.assertEqual(upf_plan.__repr__(), good_plan)
 
