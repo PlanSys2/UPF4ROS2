@@ -2,4 +2,4 @@ repositories:
   unified-planning:
     type: git
     url: https://github.com/aiplan4eu/unified-planning.git
-    version: main
+    version: master

@@ -18,11 +18,11 @@ from launch_ros.actions import Node
 
 def generate_launch_description():
 
-    kobuki_cmd = Node(package='upf4ros2',
+    upf4ros2_cmd = Node(package='upf4ros2',
                       executable='upf4ros2_main',
                       output='screen')
 
     ld = LaunchDescription()
-    ld.add_action(kobuki_cmd)
+    ld.add_action(upf4ros2_cmd)
 
     return ld
