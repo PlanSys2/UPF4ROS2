@@ -1,0 +1,48 @@
+name: main
+
+on:
+  pull_request:
+    branches:
+      - main
+  push:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ${{ matrix.os }}
+    container:
+      image: osrf/ros:humble-desktop
+    strategy:
+      matrix:
+        os: [ubuntu-22.04]
+      fail-fast: false
+    steps:
+      - name: Install deps
+        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-colcon-coveragepy-result libfl-dev
+      - name: Install tamer
+        run: pip install unified_planning[tamer]
+      - name: Create custom repos
+        run: wget -O /tmp/all.repos https://raw.githubusercontent.com/PlanSys2/UPF4ROS2/upf.repos  
+      - name: build and test
+        uses: ros-tooling/action-ros-ci@0.2.6
+        with:
+          package-name: upf4ros2 upf_msgs
+          target-ros2-distro: humble
+          vcs-repo-file-url: /tmp/all.repos
+          colcon-defaults: |
+            {
+              "test": {
+                "parallel-workers" : 1
+              }
+            }
+          colcon-mixin-name: coverage-gcc
+          colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/main/index.yaml
+      - name: Codecov
+        uses: codecov/codecov-action@v1.2.1
+        with:
+          file: ros_ws/lcov/total_coverage.info
+          flags: unittests
+          name: codecov-umbrella
+          # yml: ./codecov.yml
+          fail_ci_if_error: false
