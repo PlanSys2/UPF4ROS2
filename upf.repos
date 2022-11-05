@@ -2,7 +2,7 @@ repositories:
   unified-planning:
     type: git
     url: https://github.com/aiplan4eu/unified-planning.git
-    version: 00ab72822fb998ad9798440ab37c6e0e563f34e0
+    version: e21d3df9cb731cb1d6cf2459c505a73c53d8530e
   up-tamer:
     type: git
     url: https://github.com/aiplan4eu/up-tamer.git
