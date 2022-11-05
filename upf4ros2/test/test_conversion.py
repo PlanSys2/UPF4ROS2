@@ -344,7 +344,6 @@ class TestROS2InterfacesProblems(unittest.TestCase):
             with shortcuts.OneshotPlanner(name='tamer') as planner:
                 self.assertNotEqual(planner, None)
                 final_report = planner.solve(problem)
-                print('%s returned: %s' % (planner.name, final_report.plan))
 
                 final_report_pb = self.pb_writer.convert(final_report)
                 final_report_up = self.pb_reader.convert(final_report_pb, problem)
