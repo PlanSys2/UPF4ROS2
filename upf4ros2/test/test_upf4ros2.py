@@ -53,7 +53,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         executor = rclpy.executors.SingleThreadedExecutor()
         node_test = upf4ros2_main.UPF4ROS2Node()
-        node_cli = rclpy.create_node('test_generate_plan_from_file_pddl_node')
+        node_cli = rclpy.create_node('test_plan_from_file_pddl_no_tt_node')
         executor.add_node(node_test)
         executor.add_node(node_cli)
         executor_thread = threading.Thread(target=executor.spin, daemon=True)
@@ -106,6 +106,66 @@ class TestUPF4ROS2(unittest.TestCase):
         send_goal_future.add_done_callback(goal_response_callback)
 
         executor_thread.join()
+
+    def test_plan_from_file_pddl_tt(self):
+        rclpy.init(args=None)
+
+        executor = rclpy.executors.SingleThreadedExecutor()
+        node_test = upf4ros2_main.UPF4ROS2Node()
+        node_cli = rclpy.create_node('test_plan_from_file_pddl_tt_node')
+        executor.add_node(node_test)
+        executor.add_node(node_cli)
+        executor_thread = threading.Thread(target=executor.spin, daemon=True)
+        executor_thread.start()
+
+        goal_msg = PDDLPlanOneShot.Goal()
+        goal_msg.plan_request.mode = PDDLPlanRequest.FILE
+        goal_msg.plan_request.domain = get_package_share_directory('upf4ros2') + '/pddl/domain_tt.pddl'
+        goal_msg.plan_request.problem = get_package_share_directory('upf4ros2') + '/pddl/problem_tt_1.pddl'
+
+        reader = PDDLReader()
+        upf_problem = reader.parse_problem(goal_msg.plan_request.domain, goal_msg.plan_request.problem)
+
+        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShot')
+        
+        def goal_response_callback(future):
+            goal_handle = future.result()
+            self.assertTrue(goal_handle.accepted)
+            if not goal_handle.accepted:
+                node_cli.get_logger().info('Goal rejected :(')
+                return
+
+            node_cli.get_logger().info('Goal accepted :)')
+
+            node_cli._get_result_future = goal_handle.get_result_async()
+            node_cli._get_result_future.add_done_callback(get_result_callback)
+
+        def get_result_callback(future):
+            result = future.result().result
+            self.assertEqual(result.success, True)
+            self.assertEqual(result.message, '')
+
+            node_cli.get_logger().info('Result: success: {0} message:{1}'.
+                format(result.success, result.message))
+            rclpy.shutdown()
+
+        def feedback_callback(feedback_msg):
+            feedback = feedback_msg.feedback
+            pb_reader = ROS2InterfaceReader()
+            upf_plan = pb_reader.convert(feedback.plan_result.plan, upf_problem)
+            node_cli.get_logger().info('Received feedback: {0}'.
+                format(upf_plan))
+            
+            good_plan = '[(Fraction(0, 1), move(leia, kitchen, bedroom), Fraction(5, 1))]'
+            self.assertEqual(upf_plan.__repr__(), good_plan)
+
+        client.wait_for_server()
+
+        send_goal_future = client.send_goal_async(goal_msg, feedback_callback=feedback_callback)
+        send_goal_future.add_done_callback(goal_response_callback)
+
+        executor_thread.join()
+
 
 if __name__ == '__main__':
     unittest.main()

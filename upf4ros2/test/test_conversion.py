@@ -30,6 +30,7 @@ from unified_planning.plans import ActionInstance
 class TestROS2Interfaces(unittest.TestCase): 
     @classmethod
     def setUpClass(cls):
+        get_env().credits_stream = None
         pass
 
     @classmethod
@@ -48,47 +49,49 @@ class TestROS2Interfaces(unittest.TestCase):
         self.pb_writer = ROS2InterfaceWriter()
         self.pb_reader = ROS2InterfaceReader()
 
-#     def test_fluent(self):
-#         problem = Problem("test")
-#         x = Fluent("x")
-# 
-#         x_pb = self.pb_writer.convert(x, problem)
-# 
-#         self.assertEqual(x_pb.name, "x")
-#         self.assertEqual(x_pb.value_type, "up:bool")
-# 
-#         x_up = self.pb_reader.convert(x_pb, problem)
-# 
-#         self.assertEqual(x_up.name, "x")
-#         self.assertEqual(x_up.type, BoolType())
-# 
-#     def test_fluent_2(self):
-#         problem = self.problems["robot"].problem
-# 
-#         for f in problem.fluents:
-#             f_pb = self.pb_writer.convert(f, problem)    def test_void_problem(self):
-#             f_up = self.pb_reader.convert(f_pb, problem)
-#             self.assertEqual(f, f_up)
-# 
-#     def test_fluent_3(self):
-#         """Test to handle subtypes of usertypes of Fluent Expression"""
-#         problem = self.problems["hierarchical_blocks_world"].problem
-# 
-#         for f in problem.fluents:
-#             f_pb = self.pb_writer.convert(f, problem)
-#             f_up = self.pb_reader.convert(f_pb, problem)
-#             self.assertEqual(f, f_up)
-# 
-#     def test_objects(self):
-#         """Test to handle subtypes of usertypes of Fluent Expression"""
-#         problem = self.problems["hierarchical_blocks_world"].problem
-# 
-#         for o in problem.all_objects:
-#             o_pb = self.pb_writer.convert(o)
-#             o_up = self.pb_reader.convert(o_pb, problem)
-# 
-#             self.assertEqual(o, o_up)
-# 
+    def test_fluent(self):
+        problem = Problem("test")
+        x = Fluent("x")
+
+        x_pb = self.pb_writer.convert(x, problem)
+
+        self.assertEqual(x_pb.name, "x")
+        self.assertEqual(x_pb.value_type, "up:bool")
+
+        x_up = self.pb_reader.convert(x_pb, problem)
+
+        self.assertEqual(x_up.name, "x")
+        self.assertEqual(x_up.type, BoolType())
+
+    def test_fluent_2(self):
+        problem = self.problems["robot"].problem
+
+        for f in problem.fluents:
+            print(f)
+            f_pb = self.pb_writer.convert(f, problem)
+            print(f_pb)
+            f_up = self.pb_reader.convert(f_pb, problem)
+            self.assertEqual(f, f_up)
+
+    def test_fluent_3(self):
+        """Test to handle subtypes of usertypes of Fluent Expression"""
+        problem = self.problems["hierarchical_blocks_world"].problem
+
+        for f in problem.fluents:
+            f_pb = self.pb_writer.convert(f, problem)
+            f_up = self.pb_reader.convert(f_pb, problem)
+            self.assertEqual(f, f_up)
+
+    def test_objects(self):
+        """Test to handle subtypes of usertypes of Fluent Expression"""
+        problem = self.problems["hierarchical_blocks_world"].problem
+
+        for o in problem.all_objects:
+            o_pb = self.pb_writer.convert(o)
+            o_up = self.pb_reader.convert(o_pb, problem)
+
+            self.assertEqual(o, o_up)
+
 #     def test_expression(self):
 #         problem = Problem("test")
 #         ex = problem.env.expression_manager.true_expression

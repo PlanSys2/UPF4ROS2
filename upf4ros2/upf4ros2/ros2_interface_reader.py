@@ -42,60 +42,60 @@ from unified_planning.model.operators import OperatorKind
 from upf_msgs.msg import *
 
 
-# def convert_type_str(s: str, problem: Problem) -> model.types.Type:
-#     if s == "up:bool":
-#         return problem.env.type_manager.BoolType()
-#     elif s == "up:integer":
-#         return problem.env.type_manager.IntType()
-#     elif "up:integer[" in s:
-#         lb = int(s.split("[")[1].split(",")[0])
-#         ub = int(s.split(",")[1].split("]")[0])
-#         return problem.env.type_manager.IntType(lb, ub)
-#     elif s == "up:real":
-#         return problem.env.type_manager.RealType()
-#     elif "up:real[" in s:
-#         return problem.env.type_manager.RealType(
-#             lower_bound=fractions.Fraction(s.split("[")[1].split(",")[0]),
-#             upper_bound=fractions.Fraction(s.split(",")[1].split("]")[0]),
-#         )
-#     else:
-#         assert not s.startswith("up:"), f"Unhandled builtin type: {s}"
-#         return problem.user_type(s)
-# 
-# 
-# # The operators are based on SExpressions supported in PDDL.
-# def op_to_node_type(op: str) -> OperatorKind:
-#     if op == "up:plus":
-#         return OperatorKind.PLUS
-#     elif op == "up:minus":
-#         return OperatorKind.MINUS
-#     elif op == "up:times":
-#         return OperatorKind.TIMES
-#     elif op == "up:div":
-#         return OperatorKind.DIV
-#     elif op == "up:equals":
-#         return OperatorKind.EQUALS
-#     elif op == "up:le":
-#         return OperatorKind.LE
-#     elif op == "up:lt":
-#         return OperatorKind.LT
-#     elif op == "up:and":
-#         return OperatorKind.AND
-#     elif op == "up:or":
-#         return OperatorKind.OR
-#     elif op == "up:not":
-#         return OperatorKind.NOT
-#     elif op == "up:exists":
-#         return OperatorKind.EXISTS
-#     elif op == "up:forall":
-#         return OperatorKind.FORALL
-#     elif op == "up:implies":
-#         return OperatorKind.IMPLIES
-#     elif op == "up:iff":
-#         return OperatorKind.IFF
-# 
-#     raise ValueError(f"Unknown operator `{op}`")
-# 
+def convert_type_str(s: str, problem: Problem) -> model.types.Type:
+    if s == "up:bool":
+        return problem.env.type_manager.BoolType()
+    elif s == "up:integer":
+        return problem.env.type_manager.IntType()
+    elif "up:integer[" in s:
+        lb = int(s.split("[")[1].split(",")[0])
+        ub = int(s.split(",")[1].split("]")[0])
+        return problem.env.type_manager.IntType(lb, ub)
+    elif s == "up:real":
+        return problem.env.type_manager.RealType()
+    elif "up:real[" in s:
+        return problem.env.type_manager.RealType(
+            lower_bound=fractions.Fraction(s.split("[")[1].split(",")[0]),
+            upper_bound=fractions.Fraction(s.split(",")[1].split("]")[0]),
+        )
+    else:
+        assert not s.startswith("up:"), f"Unhandled builtin type: {s}"
+        return problem.user_type(s)
+
+
+# The operators are based on SExpressions supported in PDDL.
+def op_to_node_type(op: str) -> OperatorKind:
+    if op == "up:plus":
+        return OperatorKind.PLUS
+    elif op == "up:minus":
+        return OperatorKind.MINUS
+    elif op == "up:times":
+        return OperatorKind.TIMES
+    elif op == "up:div":
+        return OperatorKind.DIV
+    elif op == "up:equals":
+        return OperatorKind.EQUALS
+    elif op == "up:le":
+        return OperatorKind.LE
+    elif op == "up:lt":
+        return OperatorKind.LT
+    elif op == "up:and":
+        return OperatorKind.AND
+    elif op == "up:or":
+        return OperatorKind.OR
+    elif op == "up:not":
+        return OperatorKind.NOT
+    elif op == "up:exists":
+        return OperatorKind.EXISTS
+    elif op == "up:forall":
+        return OperatorKind.FORALL
+    elif op == "up:implies":
+        return OperatorKind.IMPLIES
+    elif op == "up:iff":
+        return OperatorKind.IFF
+
+    raise ValueError(f"Unknown operator `{op}`")
+
 
 class ROS2InterfaceReader(Converter):
     """
@@ -103,28 +103,28 @@ class ROS2InterfaceReader(Converter):
     unified_planning Problem and return the equivalent unified_planning Problem instance.
     """
 
-#     @handles(proto.Parameter)
-#     def _convert_parameter(
-#         self, msg: proto.Parameter, problem: Problem
-#     ) -> model.Parameter:
-#         return model.Parameter(
-#             msg.name, convert_type_str(msg.type, problem), problem.env
-#         )
-# 
-#     @handles(proto.Fluent)
-#     def _convert_fluent(self, msg: proto.Fluent, problem: Problem) -> model.Fluent:
-#         value_type: model.types.Type = convert_type_str(msg.value_type, problem)
-#         sig: list = []
-#         for p in msg.parameters:
-#             sig.append(self.convert(p, problem))
-#         fluent = model.Fluent(msg.name, value_type, sig, problem.env)
-#         return fluent
-# 
-#     @handles(proto.ObjectDeclaration)
-#     def _convert_object(
-#         self, msg: proto.ObjectDeclaration, problem: Problem
-#     ) -> model.Object:
-#         return model.Object(msg.name, convert_type_str(msg.type, problem))
+    @handles(Parameter)
+    def _convert_parameter(
+        self, msg: Parameter, problem: Problem
+    ) -> model.Parameter:
+        return model.Parameter(
+            msg.name, convert_type_str(msg.type, problem), problem.env
+        )
+
+    @handles(Fluent)
+    def _convert_fluent(self, msg: Fluent, problem: Problem) -> Fluent:
+        value_type: model.types.Type = convert_type_str(msg.value_type, problem)
+        sig: list = []
+        for p in msg.parameters:
+            sig.append(self.convert(p, problem))
+        fluent = model.Fluent(msg.name, value_type, sig, problem.env)
+        return fluent
+
+    @handles(ObjectDeclaration)
+    def _convert_object(
+        self, msg: ObjectDeclaration, problem: Problem
+    ) -> model.Object:
+        return model.Object(msg.name, convert_type_str(msg.type, problem))
 # 
 #     @handles(proto.Expression)
 #     def _convert_expression(
@@ -497,55 +497,55 @@ class ROS2InterfaceReader(Converter):
 #             condition=self.convert(msg.condition, problem),
 #             kind=kind,
 #         )
-# 
-#     @handles(proto.Duration)
-#     def _convert_duration(
-#         self, msg: proto.Duration, problem: Problem
-#     ) -> model.timing.DurationInterval:
-#         return model.timing.DurationInterval(
-#             lower=self.convert(msg.controllable_in_bounds.lower, problem),
-#             upper=self.convert(msg.controllable_in_bounds.upper, problem),
-#             is_left_open=bool(msg.controllable_in_bounds.is_left_open),
-#             is_right_open=bool(msg.controllable_in_bounds.is_right_open),
-#         )
-# 
-#     @handles(proto.TimeInterval)
-#     def _convert_timed_interval(self, msg: proto.TimeInterval) -> model.TimeInterval:
-#         return model.TimeInterval(
-#             lower=self.convert(msg.lower),
-#             upper=self.convert(msg.upper),
-#             is_left_open=msg.is_left_open,
-#             is_right_open=msg.is_right_open,
-#         )
-# 
-#     @handles(proto.Timing)
-#     def _convert_timing(self, msg: proto.Timing) -> model.timing.Timing:
-#         return model.Timing(
-#             delay=self.convert(msg.delay)
-#             if msg.HasField("delay")
-#             else fractions.Fraction(0),
-#             timepoint=self.convert(msg.timepoint),
-#         )
-# 
-#     @handles(proto.Real)
-#     def _convert_real(self, msg: proto.Real) -> fractions.Fraction:
-#         return fractions.Fraction(msg.numerator, msg.denominator)
-# 
-#     @handles(proto.Timepoint)
-#     def _convert_timepoint(self, msg: proto.Timepoint) -> model.timing.Timepoint:
-#         if msg.kind == proto.Timepoint.TimepointKind.Value("GLOBAL_START"):
-#             kind = model.timing.TimepointKind.GLOBAL_START
-#         elif msg.kind == proto.Timepoint.TimepointKind.Value("GLOBAL_END"):
-#             kind = model.timing.TimepointKind.GLOBAL_END
-#         elif msg.kind == proto.Timepoint.TimepointKind.Value("START"):
-#             kind = model.timing.TimepointKind.START
-#         elif msg.kind == proto.Timepoint.TimepointKind.Value("END"):
-#             kind = model.timing.TimepointKind.END
-#         else:
-#             raise UPException("Unknown timepoint kind: {}".format(msg.kind))
-#         container = msg.container_id if msg.container_id != "" else None
-#         return model.timing.Timepoint(kind, container)
-# 
+
+    @handles(Duration)
+    def _convert_duration(
+        self, msg: Duration, problem: Problem
+    ) -> model.timing.DurationInterval:
+        return model.timing.DurationInterval(
+            lower=self.convert(msg.controllable_in_bounds.lower, problem),
+            upper=self.convert(msg.controllable_in_bounds.upper, problem),
+            is_left_open=bool(msg.controllable_in_bounds.is_left_open),
+            is_right_open=bool(msg.controllable_in_bounds.is_right_open),
+        )
+
+    @handles(TimeInterval)
+    def _convert_timed_interval(self, msg: TimeInterval) -> model.TimeInterval:
+        return model.TimeInterval(
+            lower=self.convert(msg.lower),
+            upper=self.convert(msg.upper),
+            is_left_open=msg.is_left_open,
+            is_right_open=msg.is_right_open,
+        )
+
+    @handles(Timing)
+    def _convert_timing(self, msg: Timing) -> model.timing.Timing:
+        return model.Timing(
+            delay=self.convert(msg.delay)
+            if msg.HasField("delay")
+            else fractions.Fraction(0),
+            timepoint=self.convert(msg.timepoint),
+        )
+
+    @handles(Real)
+    def _convert_real(self, msg: Real) -> fractions.Fraction:
+        return fractions.Fraction(msg.numerator, msg.denominator)
+
+    @handles(Timepoint)
+    def _convert_timepoint(self, msg: Timepoint) -> model.timing.Timepoint:
+        if msg.kind == Timepoint.GLOBAL_START:
+            kind = model.timing.TimepointKind.GLOBAL_START
+        elif msg.kind == Timepoint.GLOBAL_END:
+            kind = model.timing.TimepointKind.GLOBAL_END
+        elif msg.kind == Timepoint.START:
+            kind = model.timing.TimepointKind.START
+        elif msg.kind == Timepoint.END:
+            kind = model.timing.TimepointKind.END
+        else:
+            raise UPException("Unknown timepoint kind: {}".format(msg.kind))
+        container = msg.container_id if msg.container_id != "" else None
+        return model.timing.Timepoint(kind, container)
+
     @handles(Plan)
     def _convert_plan(
         self, msg: Plan, problem: Problem

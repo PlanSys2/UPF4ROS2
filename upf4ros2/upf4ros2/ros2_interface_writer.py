@@ -39,38 +39,38 @@ from unified_planning.model.timing import TimepointKind
 from upf_msgs.msg import *
 
 
-#def map_operator(op: int) -> str:
-#    if op == OperatorKind.PLUS:
-#        return "up:plus"
-#    elif op == OperatorKind.MINUS:
-#        return "up:minus"
-#    elif op == OperatorKind.TIMES:
-#        return "up:times"
-#    elif op == OperatorKind.DIV:
-#        return "up:div"
-#    elif op == OperatorKind.LE:
-#        return "up:le"
-#    elif op == OperatorKind.LT:
-#        return "up:lt"
-#    elif op == OperatorKind.EQUALS:
-#        return "up:equals"
-#    elif op == OperatorKind.AND:
-#        return "up:and"
-#    elif op == OperatorKind.OR:
-#        return "up:or"
-#    elif op == OperatorKind.NOT:
-#        return "up:not"
-#    elif op == OperatorKind.IMPLIES:
-#        return "up:implies"
-#    elif op == OperatorKind.IFF:
-#        return "up:iff"
-#    elif op == OperatorKind.EXISTS:
-#        return "up:exists"
-#    elif op == OperatorKind.FORALL:
-#        return "up:forall"
-#    raise ValueError(f"Unknown operator `{op}`")
-#
-#
+def map_operator(op: int) -> str:
+    if op == OperatorKind.PLUS:
+        return "up:plus"
+    elif op == OperatorKind.MINUS:
+        return "up:minus"
+    elif op == OperatorKind.TIMES:
+        return "up:times"
+    elif op == OperatorKind.DIV:
+        return "up:div"
+    elif op == OperatorKind.LE:
+        return "up:le"
+    elif op == OperatorKind.LT:
+        return "up:lt"
+    elif op == OperatorKind.EQUALS:
+        return "up:equals"
+    elif op == OperatorKind.AND:
+        return "up:and"
+    elif op == OperatorKind.OR:
+        return "up:or"
+    elif op == OperatorKind.NOT:
+        return "up:not"
+    elif op == OperatorKind.IMPLIES:
+        return "up:implies"
+    elif op == OperatorKind.IFF:
+        return "up:iff"
+    elif op == OperatorKind.EXISTS:
+        return "up:exists"
+    elif op == OperatorKind.FORALL:
+        return "up:forall"
+    raise ValueError(f"Unknown operator `{op}`")
+
+
 def interface_type(tpe: model.Type) -> str:
     if tpe.is_bool_type():
         return "up:bool"
@@ -118,15 +118,17 @@ class FNode2ROS2(walkers.DagWalker):
         self, expression: model.FNode, args: List[Expression]
     ) -> Expression:
         print('walk_real_constant')
-        return Expression()
-        # return Expression(
-        #     atom=proto.Atom(
-        #         real=self._protobuf_writer.convert(expression.real_constant_value())
-        #     ),
-        #     list=[],
-        #     kind=proto.ExpressionKind.Value("CONSTANT"),
-        #     type="up:real",
-        # )
+        item = ExpressionItem()
+        real = Real()
+        real.numerator = expression.real_constant_value().numerator
+        real.denominator = expression.real_constant_value().denominator
+        item.atom.real_atom.append(real)
+        item.type = "up:real"
+        item.kind = ExpressionItem.CONSTANT
+        ret = Expression()
+        ret.expressions.append(item)
+        ret.level.append(0)
+        return ret
 
     def walk_param_exp(
         self, expression: model.FNode, args: List[Expression]
@@ -271,81 +273,75 @@ class ROS2InterfaceWriter(Converter):
         super().__init__()
         self._fnode2ros2 = FNode2ROS2(self)
 
-#     @handles(model.Fluent)
-#     def _convert_fluent(
-#         self, fluent: model.Fluent, problem: model.Problem
-#     ) -> Fluent:
-#         name = fluent.name
-#         sig = [self.convert(t) for t in fluent.signature]
-# 
-#         ret = Fluent()
-#         ret.name = name
-#         ret.parameters = sig
-#         ret.default_value = self.convert(problem.fluents_defaults[fluent]) if fluent in problem.fluents_defaults else None
-# 
-#         return ret
-# 
-#     @handles(model.Object)
-#     def _convert_object(self, obj: model.Object) -> ObjectDeclaration:
-#         ret = ObjectDeclaration()
-#         ret.name = obj.name
-#         ret.type = interface_type(obj.type)
-# 
-#         return ret
-# 
+    @handles(model.Fluent)
+    def _convert_fluent(
+        self, fluent: model.Fluent, problem: model.Problem
+    ) -> Fluent:
+        name = fluent.name
+        sig = [self.convert(t) for t in fluent.signature]
+
+        ret = Fluent()
+        ret.name = name
+        ret.value_type=interface_type(fluent.type)
+        ret.parameters = sig
+        ret.default_value = self.convert(problem.fluents_defaults[fluent]) if fluent in problem.fluents_defaults else Expression()
+        return ret
+ 
+    @handles(model.Object)
+    def _convert_object(self, obj: model.Object) -> ObjectDeclaration:
+        ret = ObjectDeclaration()
+        ret.name = obj.name
+        ret.type = interface_type(obj.type)
+        return ret
+
     @handles(model.FNode)
     def _convert_fnode(self, exp: model.FNode) -> Expression:
         return self._fnode2ros2.convert(exp)
  
-#     @handles(model.types._BoolType)
-#     def _convert_bool_type(self, tpe: model.types._BoolType) -> TypeDeclaration:
-#         ret = TypeDeclaration()
-#         ret.type_name = interface_type(tpe)
-# 
-#         return ret
-# 
-#     @handles(model.types._UserType)
-#     def _convert_user_type(self, t: model.types._UserType) -> TypeDeclaration:
-#         ret = TypeDeclaration()
-#         ret.type_name = interface_type(t)
-#         ret.parent_type="" if t.father is None else interface_type(t.father)
-# 
-#         return ret
-# 
-#     @handles(model.types._IntType)
-#     def _convert_integer_type(self, t: model.types._IntType) -> TypeDeclaration:
-#         ret = TypeDeclaration()
-#         ret.type_name = interface_type(t)
-# 
-#         return ret
-# 
-#     @handles(model.types._RealType)
-#     def _convert_real(self, t: model.types._RealType) -> TypeDeclaration:
-#         ret = TypeDeclaration()
-#          ret.type_name = interface_type(t)
-#         
-#         return ret
-# 
-#     @handles(model.Effect)
-#     def _convert_effect(self, effect: model.Effect) -> Effect:
-#         kind = None
-#         if effect.is_assignment():
-#             kind = EffectExpression.ASSIGN
-#         elif effect.is_increase():
-#             kind = EffectExpression.INCREASE
-#         elif effect.is_decrease():
-#             kind = EffectExpression.DECREASE
-#         else:
-#             raise ValueError(f"Unsupported effect: {effect}")
-# 
-#         ret = Effect()
-#         ret.effect.kind = kind
-#         ret.effect.fluent = self.convert(effect.fluent)
-#         ret.effect.value = self.convert(effect.value)
-#         ret.effect.condition = self.convert(effect.condition)
-# 
-#         return ret
-# 
+    @handles(model.types._BoolType)
+    def _convert_bool_type(self, tpe: model.types._BoolType) -> TypeDeclaration:
+        ret = TypeDeclaration()
+        ret.type_name = interface_type(tpe)
+        return ret
+
+    @handles(model.types._UserType)
+    def _convert_user_type(self, t: model.types._UserType) -> TypeDeclaration:
+        ret = TypeDeclaration()
+        ret.type_name = interface_type(t)
+        ret.parent_type="" if t.father is None else interface_type(t.father)
+        return ret
+
+    @handles(model.types._IntType)
+    def _convert_integer_type(self, t: model.types._IntType) -> TypeDeclaration:
+        ret = TypeDeclaration()
+        ret.type_name = interface_type(t)
+        return ret
+
+    @handles(model.types._RealType)
+    def _convert_real(self, t: model.types._RealType) -> TypeDeclaration:
+        ret = TypeDeclaration()
+        ret.type_name = interface_type(t)     
+        return ret
+
+    @handles(model.Effect)
+    def _convert_effect(self, effect: model.Effect) -> Effect:
+        kind = None
+        if effect.is_assignment():
+            kind = EffectExpression.ASSIGN
+        elif effect.is_increase():
+            kind = EffectExpression.INCREASE
+        elif effect.is_decrease():
+            kind = EffectExpression.DECREASE
+        else:
+            raise ValueError(f"Unsupported effect: {effect}")
+
+        ret = Effect()
+        ret.effect.kind = kind
+        ret.effect.fluent = self.convert(effect.fluent)
+        ret.effect.value = self.convert(effect.value)
+        ret.effect.condition = self.convert(effect.condition)
+        return ret
+
 #     @handles(model.InstantaneousAction)
 #     def _convert_instantaneous_action(
 #         self, a: model.InstantaneousAction
@@ -406,73 +402,68 @@ class ROS2InterfaceWriter(Converter):
 #         
 #         return ret
 # 
-#     @handles(model.timing.Timepoint)
-#     def _convert_timepoint(self, tp: model.timing.Timepoint) -> Timepoint:
-#         if tp.kind == TimepointKind.START:
-#             kind = TimepointKind..START
-#         elif tp.kind == TimepointKind.END:
-#             kind = Timepoint.END
-#         elif tp.kind == TimepointKind.GLOBAL_START:
-#             kind = Timepoint.GLOBAL_START
-#         elif tp.kind == TimepointKind.GLOBAL_END:
-#             kind = Timepoint.GLOBAL_END
-#         
-#         ret = Timepoint()
-#         ret.kind = kind
-#         ret.container_id=tp.container
-# 
-#         return ret
-# 
-#     @handles(model.Timing)
-#     def _convert_timing(self, timing: model.Timing) -> Timing:
-#         ret = Timing()
-#         ret.timepoint=self.convert(timing._timepoint)
-#         ret.delay=self.convert(fractions.Fraction(timing.delay))
-# 
-#         return ret
-# 
-#     @handles(fractions.Fraction)
-#     def _convert_fraction(self, fraction: fractions.Fraction) -> Real:
-#         ret = Real()
-#         ret.numerator=fraction.numerator
-#         ret.denominator=fraction.denominator
-# 
-#         return ret
-# 
-#     @handles(model.timing.Interval)
-#     def _convert_interval(self, interval: model.timing.Interval) -> Interval:
-#         ret = Interval()
-# 
-#         ret.is_left_open=interval.is_left_open()
-#         ret.lower=self.convert(interval.lower())
-#         ret.is_right_open=interval.is_right_open()
-#         ret.upper=self.convert(interval.lower())
-# 
-#         return ret
-# 
-#     @handles(model.TimeInterval)
-#     def _convert_time_interval(
-#         self, interval: model.TimeInterval
-#     ) -> TimeInterval:
-#         ret = TimeInterval()
-#         ret.is_left_open=interval.is_left_open()
-#         ret.lower=self.convert(interval.lower)
-#         ret.is_right_open=interval.is_right_open()
-#         ret.upper=self.convert(interval.upper)
-# 
-#         return ret
-# 
-#     @handles(model.DurationInterval)
-#     def _convert_duration_interval(
-#         self, interval: model.DurationInterval
-#     ) -> Interval:
-#         ret = Interval()
-#         ret.controllable_in_bounds.is_left_open=interval.is_left_open()
-#         ret.controllable_in_bounds.lower=self.convert(interval.lower)
-#         ret.controllable_in_bounds.is_right_open=interval.is_right_open()
-#         ret.controllable_in_bounds.upper=self.convert(interval.upper)
-#         
-#         return ret
+    @handles(model.timing.Timepoint)
+    def _convert_timepoint(self, tp: model.timing.Timepoint) -> Timepoint:
+        if tp.kind == TimepointKind.START:
+            kind = TimepointKind.START
+        elif tp.kind == TimepointKind.END:
+            kind = Timepoint.END
+        elif tp.kind == TimepointKind.GLOBAL_START:
+            kind = Timepoint.GLOBAL_START
+        elif tp.kind == TimepointKind.GLOBAL_END:
+            kind = Timepoint.GLOBAL_END
+        
+        ret = Timepoint()
+        ret.kind = kind
+        ret.container_id=tp.container
+        return ret
+
+    @handles(model.Timing)
+    def _convert_timing(self, timing: model.Timing) -> Timing:
+        ret = Timing()
+        ret.timepoint=self.convert(timing._timepoint)
+        ret.delay=self.convert(fractions.Fraction(timing.delay))
+        return ret
+ 
+    @handles(fractions.Fraction)
+    def _convert_fraction(self, fraction: fractions.Fraction) -> Real:
+        ret = Real()
+        ret.numerator=fraction.numerator
+        ret.denominator=fraction.denominator
+        return ret
+
+    @handles(model.timing.Interval)
+    def _convert_interval(self, interval: model.timing.Interval) -> Interval:
+        ret = Interval()
+
+        ret.is_left_open=interval.is_left_open()
+        ret.lower=self.convert(interval.lower())
+        ret.is_right_open=interval.is_right_open()
+        ret.upper=self.convert(interval.lower())
+        return ret
+
+    @handles(model.TimeInterval)
+    def _convert_time_interval(
+        self, interval: model.TimeInterval
+    ) -> TimeInterval:
+        ret = TimeInterval()
+        ret.is_left_open=interval.is_left_open()
+        ret.lower=self.convert(interval.lower)
+        ret.is_right_open=interval.is_right_open()
+        ret.upper=self.convert(interval.upper)
+        return ret
+
+    @handles(model.DurationInterval)
+    def _convert_duration_interval(
+        self, interval: model.DurationInterval
+    ) -> Interval:
+        ret = Interval()
+        ret.controllable_in_bounds.is_left_open=interval.is_left_open()
+        ret.controllable_in_bounds.lower=self.convert(interval.lower)
+        ret.controllable_in_bounds.is_right_open=interval.is_right_open()
+        ret.controllable_in_bounds.upper=self.convert(interval.upper)
+        
+        return ret
 # 
 #     @handles(model.htn.Task)
 #     def _convert_abstract_task(

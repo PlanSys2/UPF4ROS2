@@ -2,7 +2,7 @@
 
 string name
 # Return type of the fluent.
-string value_type
+string value_type "up:bool"
 # Typed and named parameters of the fluent.
 upf_msgs/Parameter[] parameters
 
