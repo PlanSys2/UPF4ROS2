@@ -23,7 +23,7 @@ upf_msgs/Metric[] metrics
 
 # If the problem is hierarchical, defines the tasks and methods as well as the initial task network.
 # features: hierarchical
-upf_msgs/Hierarchy hierarchy
+upf_msgs/Hierarchy[<=1] hierarchy
 
 # all features of the problem
 uint8[] features

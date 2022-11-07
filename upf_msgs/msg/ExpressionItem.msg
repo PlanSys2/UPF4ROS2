@@ -2,7 +2,7 @@
 
 # If non-empty, the expression is a single atom.
 # For instance `3`, `+`, `kitchen`, `at-robot`, ...
-upf_msgs/Atom atom
+upf_msgs/Atom[<=1] atom
 # If the `atom` field is empty, then the expression is a list of sub-expressions,
 # typically representing the application of some arguments to a function or fluent.
 # For instance `(+ 1 3)`, (at-robot l1)`, `(>= (battery_level) 20)`

@@ -10,4 +10,4 @@ upf_msgs/Parameter[] parameters
 # will be assumed to have this default value.
 # This allows mimicking the closed world assumption by setting a "false" default value to predicates.
 # Note that in the initial state of the problem message, it is assumed that all default values are set.
-upf_msgs/Expression default_value
+upf_msgs/Expression[<=1] default_value

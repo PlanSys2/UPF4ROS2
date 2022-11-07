@@ -5,4 +5,4 @@ upf_msgs/EffectExpression effect
 
 # Optional. If the effect is within a durative action, the following must be set and will specify when the effect takes place.
 # features: DURATIVE_ACTIONS
-upf_msgs/Timing occurrence_time
+upf_msgs/Timing[<=1] occurrence_time

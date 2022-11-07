@@ -36,7 +36,7 @@ from unified_planning.model.timing import TimepointKind
 import unified_planning.model.walkers as walkers
 from upf4ros2.converter import Converter, handles
 
-from upf_msgs import msg
+from upf_msgs import msg as msgs
 
 
 def map_operator(op: int) -> str:
@@ -88,90 +88,97 @@ class FNode2ROS2(walkers.DagWalker):
         super().__init__()
         self._ros2_writer = ros2_writer
 
-    def convert(self, expression: model.FNode) -> msg.Expression:
+    def convert(self, expression: model.FNode) -> msgs.Expression:
         return self.walk(expression)
 
     def walk_bool_constant(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        print('walk_bool_constant')
-        return msg.Expression()
-        # return Expression(
-        #     atom=proto.Atom(boolean=expression.bool_constant_value()),
-        #     list=[],
-        #     kind=proto.ExpressionKind.Value('CONSTANT'),
-        #     type='up:bool',
-        # )
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        item = msgs.ExpressionItem()
+        item.atom.append(msgs.Atom())
+        item.atom[0].boolean_atom.append(expression.bool_constant_value())
+        item.type = 'up:bool'
+        item.kind = msgs.ExpressionItem.CONSTANT
+        ret = msgs.Expression()
+        ret.expressions.append(item)
+        ret.level.append(0)
+        return ret
 
     def walk_int_constant(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        print('walk_int_constant')
-        return msg.Expression()
-        # return Expression(
-        #    atom=proto.Atom(int=expression.int_constant_value()),
-        #    list=[],
-        #    kind=proto.ExpressionKind.Value('CONSTANT'),
-        #    type='up:integer',
-        #
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        item = msgs.ExpressionItem()
+        item.atom.append(msgs.Atom())
+        item.atom[0].int_atom.append(expression.int_constant_value())
+        item.type = 'up:integer'
+        item.kind = msgs.ExpressionItem.CONSTANT
+        ret = msgs.Expression()
+        ret.expressions.append(item)
+        ret.level.append(0)
+        return ret
+
 
     def walk_real_constant(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        print('walk_real_constant')
-        item = msg.ExpressionItem()
-        real = msg.Real()
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        item = msgs.ExpressionItem()
+        real = msgs.Real()
         real.numerator = expression.real_constant_value().numerator
         real.denominator = expression.real_constant_value().denominator
-        item.atom.real_atom.append(real)
+        item.atom.append(msgs.Atom())
+        item.atom[0].real_atom.append(real)
         item.type = 'up:real'
-        item.kind = msg.ExpressionItem.CONSTANT
-        ret = msg.Expression()
+        item.kind = msgs.ExpressionItem.CONSTANT
+        ret = msgs.Expression()
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
 
     def walk_param_exp(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        item = msg.ExpressionItem()
-        item.atom.symbol_atom.append(expression.parameter().name)
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        item = msgs.ExpressionItem()
+        item.atom.append(msgs.Atom())
+        item.atom[0].symbol_atom.append(expression.parameter().name)
         item.type = interface_type(expression.parameter().type)
-        item.kind = msg.ExpressionItem.PARAMETER
-        ret = msg.Expression()
+        item.kind = msgs.ExpressionItem.PARAMETER
+        ret = msgs.Expression()
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
 
     def walk_variable_exp(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        print('walk_variable_exp')
-        return msg.Expression()
-        # return Expression(
-        #     atom=proto.Atom(symbol=expression.variable().name),
-        #     list=[],
-        #     kind=proto.ExpressionKind.Value('VARIABLE'),
-        #     type=proto_type(expression.variable().type),
-        # )
-
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        item = msgs.ExpressionItem()
+        s_atom = msgs.Atom()
+        s_atom.symbol_atom.append(expression.variable().name)
+        item.atom.append(s_atom)
+        item.type = interface_type(expression.variable().type)
+        item.kind = msgs.ExpressionItem.VARIABLE
+        ret = msgs.Expression()
+        ret.expressions.append(item)
+        ret.level.append(0)
+        return ret
+ 
     def walk_object_exp(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        item = msg.ExpressionItem()
-        item.atom.symbol_atom.append(expression.object().name)
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        item = msgs.ExpressionItem()
+        item.atom.append(msgs.Atom())
+        item.atom[0].symbol_atom.append(expression.object().name)
         item.type = interface_type(expression.object().type)
-        item.kind = msg.ExpressionItem.CONSTANT
-        ret = msg.Expression()
+        item.kind = msgs.ExpressionItem.CONSTANT
+        ret = msgs.Expression()
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
 
     def walk_timing_exp(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
         print('walk_object_exp')
-        return msg.Expression()
+        return msgs.Expression()
         # timing = expression.timing()
         # tp = timing.timepoint
         # if timing.timepoint.container is not None:
@@ -206,33 +213,43 @@ class FNode2ROS2(walkers.DagWalker):
         # assert timing.delay == 0
         # return tp_exp
 
+    def increase_level_expressions(
+        self, expressions: List[msgs.Expression], incr: int
+    ) -> List[msgs.Expression]:
+        ret = expressions.copy()
+        for expr in ret:
+            for level in expr.level:
+                level += incr
+        return ret
+
     def walk_fluent_exp(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
-        print('walk_fluent_exp')
-        return msg.Expression()
-        # sub_list = []
-        # sub_list.append(
-        #     Expression(
-        #         atom=proto.Atom(symbol=expression.fluent().name),
-        #         kind=proto.ExpressionKind.Value('FLUENT_SYMBOL'),
-        #         type=proto_type(expression.fluent().type),
-        #     )
-        # )
-        # sub_list.extend(args)
-        # return Expression(
-        #     atom=None,
-        #     list=sub_list,
-        #     kind=proto.ExpressionKind.Value('STATE_VARIABLE'),
-        #     type=proto_type(expression.fluent().type),
-        # )
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
+        ret = msgs.Expression()
+        item_root = msgs.ExpressionItem()
+        item_root.type = interface_type(expression.fluent().type)
+        item_root.kind = msgs.ExpressionItem.STATE_VARIABLE
+        ret.expressions.append(item_root)
+        ret.level.append(0)
+
+        item = msgs.ExpressionItem()
+        item.atom.append(msgs.Atom())
+        item.atom[0].symbol_atom.append(expression.fluent().name)
+        item.type = interface_type(expression.fluent().type)
+        item.kind = msgs.ExpressionItem.FLUENT_SYMBOL
+        ret.expressions.append(item)
+        ret.level.append(1)
+        
+        ret.expressions.extend(self.increase_level_expressions(args, 1))
+        print(ret)
+        return ret
 
     @walkers.handles(BOOL_OPERATORS.union(IRA_OPERATORS).union(RELATIONS))
     def walk_operator(
-        self, expression: model.FNode, args: List[msg.Expression]
-    ) -> msg.Expression:
+        self, expression: model.FNode, args: List[msgs.Expression]
+    ) -> msgs.Expression:
         print('walk_operator')
-        return msg.Expression()
+        return msgs.Expression()
         # sub_list = []
         # sub_list.append(
         #     Expression(
@@ -257,13 +274,46 @@ class FNode2ROS2(walkers.DagWalker):
         #     type='',
         # )
 
+map_features = {
+    'ACTION_BASED' : msgs.Problem.ACTION_BASED,
+    'HIERARCHICAL' : msgs.Problem.HIERARCHICAL,
+    'SIMPLE_NUMERIC_PLANNING' : msgs.Problem.SIMPLE_NUMERIC_PLANNING,
+    'GENERAL_NUMERIC_PLANNING' : msgs.Problem.GENERAL_NUMERIC_PLANNING,
+    'CONTINUOUS_TIME' : msgs.Problem.CONTINUOUS_TIME,
+    'DISCRETE_TIME' : msgs.Problem.DISCRETE_TIME,
+    'INTERMEDIATE_CONDITIONS_AND_EFFECTS' : msgs.Problem.INTERMEDIATE_CONDITIONS_AND_EFFECTS,
+    'TIMED_EFFECT' : msgs.Problem.TIMED_EFFECT,
+    'TIMED_GOALS' : msgs.Problem.TIMED_GOALS,
+    'DURATION_INEQUALITIES' : msgs.Problem.DURATION_INEQUALITIES,
+    'STATIC_FLUENTS_IN_DURATION' : msgs.Problem.STATIC_FLUENTS_IN_DURATION,
+    'FLUENTS_IN_DURATION' : msgs.Problem.FLUENTS_IN_DURATION,
+    'CONTINUOUS_NUMBERS' : msgs.Problem.CONTINUOUS_NUMBERS,
+    'DISCRETE_NUMBERS' : msgs.Problem.DISCRETE_NUMBERS,
+    'NEGATIVE_CONDITIONS' : msgs.Problem.NEGATIVE_CONDITIONS,
+    'DISJUNCTIVE_CONDITIONS' : msgs.Problem.DISJUNCTIVE_CONDITIONS,
+    'EQUALITY' : msgs.Problem.EQUALITY,
+    'EXISTENTIAL_CONDITIONS' : msgs.Problem.EXISTENTIAL_CONDITIONS,
+    'UNIVERSAL_CONDITIONS' : msgs.Problem.UNIVERSAL_CONDITIONS,
+    'CONDITIONAL_EFFECTS' : msgs.Problem.CONDITIONAL_EFFECTS,
+    'INCREASE_EFFECTS' : msgs.Problem.INCREASE_EFFECTS,
+    'DECREASE_EFFECTS' : msgs.Problem.DECREASE_EFFECTS,
+    'FLAT_TYPING' : msgs.Problem.FLAT_TYPING,
+    'HIERARCHICAL_TYPING' : msgs.Problem.HIERARCHICAL_TYPING,
+    'NUMERIC_FLUENTS' : msgs.Problem.NUMERIC_FLUENTS,
+    'OBJECT_FLUENTS' : msgs.Problem.OBJECT_FLUENTS,
+    'ACTIONS_COST' : msgs.Problem.ACTIONS_COST,
+    'FINAL_VALUE' : msgs.Problem.FINAL_VALUE,
+    'MAKESPAN' : msgs.Problem.MAKESPAN,
+    'PLAN_LENGTH' : msgs.Problem.PLAN_LENGTH,
+    'OVERSUBSCRIPTION' : msgs.Problem.OVERSUBSCRIPTION,
+    'SIMULATED_EFFECTS' : msgs.Problem.SIMULATED_EFFECTS,
+}
 
-# def map_feature(feature: str) -> Feature:
-#     pb_feature = proto.Feature.Value(feature)
-#     if pb_feature is None:
-#         raise ValueError(f'Cannot convert feature to protobuf {feature}')
-#     return pb_feature
-
+def map_feature(feature: str) -> int:    
+    pb_feature = map_features[feature]
+    if pb_feature is None:
+        raise ValueError(f'Cannot convert feature to protobuf {feature}')
+    return pb_feature
 
 class ROS2InterfaceWriter(Converter):
     """Class to convert from unified_planning Problem instance to ROS 2 Interfaces."""
@@ -275,101 +325,97 @@ class ROS2InterfaceWriter(Converter):
     @handles(model.Fluent)
     def _convert_fluent(
         self, fluent: model.Fluent, problem: model.Problem
-    ) -> msg.Fluent:
+    ) -> msgs.Fluent:
         name = fluent.name
         sig = [self.convert(t) for t in fluent.signature]
 
-        ret = msg.Fluent()
+        ret = msgs.Fluent()
         ret.name = name
         ret.value_type = interface_type(fluent.type)
         ret.parameters = sig
         if fluent in problem.fluents_defaults:
-            ret.default_value = self.convert(problem.fluents_defaults[fluent])
-        else:
-            ret.default_value = msg.Expression()
+            ret.default_value.append(self.convert(problem.fluents_defaults[fluent]))
         return ret
 
     @handles(model.Object)
-    def _convert_object(self, obj: model.Object) -> msg.ObjectDeclaration:
-        ret = msg.ObjectDeclaration()
+    def _convert_object(self, obj: model.Object) -> msgs.ObjectDeclaration:
+        ret = msgs.ObjectDeclaration()
         ret.name = obj.name
         ret.type = interface_type(obj.type)
         return ret
 
     @handles(model.FNode)
-    def _convert_fnode(self, exp: model.FNode) -> msg.Expression:
+    def _convert_fnode(self, exp: model.FNode) -> msgs.Expression:
         return self._fnode2ros2.convert(exp)
 
     @handles(model.types._BoolType)
-    def _convert_bool_type(self, tpe: model.types._BoolType) -> msg.TypeDeclaration:
-        ret = msg.TypeDeclaration()
+    def _convert_bool_type(self, tpe: model.types._BoolType) -> msgs.TypeDeclaration:
+        ret = msgs.TypeDeclaration()
         ret.type_name = interface_type(tpe)
         return ret
 
     @handles(model.types._UserType)
-    def _convert_user_type(self, t: model.types._UserType) -> msg.TypeDeclaration:
-        ret = msg.TypeDeclaration()
+    def _convert_user_type(self, t: model.types._UserType) -> msgs.TypeDeclaration:
+        ret = msgs.TypeDeclaration()
         ret.type_name = interface_type(t)
         ret.parent_type = '' if t.father is None else interface_type(t.father)
         return ret
 
     @handles(model.types._IntType)
-    def _convert_integer_type(self, t: model.types._IntType) -> msg.TypeDeclaration:
-        ret = msg.TypeDeclaration()
+    def _convert_integer_type(self, t: model.types._IntType) -> msgs.TypeDeclaration:
+        ret = msgs.TypeDeclaration()
         ret.type_name = interface_type(t)
         return ret
 
     @handles(model.types._RealType)
-    def _convert_real(self, t: model.types._RealType) -> msg.TypeDeclaration:
-        ret = msg.TypeDeclaration()
+    def _convert_real(self, t: model.types._RealType) -> msgs.TypeDeclaration:
+        ret = msgs.TypeDeclaration()
         ret.type_name = interface_type(t)
         return ret
 
     @handles(model.Effect)
-    def _convert_effect(self, effect: model.Effect) -> msg.Effect:
+    def _convert_effect(self, effect: model.Effect) -> msgs.EffectExpression:
         kind = None
         if effect.is_assignment():
-            kind = msg.EffectExpression.ASSIGN
+            kind = msgs.EffectExpression.ASSIGN
         elif effect.is_increase():
-            kind = msg.EffectExpression.INCREASE
+            kind = msgs.EffectExpression.INCREASE
         elif effect.is_decrease():
-            kind = msg.EffectExpression.DECREASE
+            kind = msgs.EffectExpression.DECREASE
         else:
             raise ValueError(f'Unsupported effect: {effect}')
 
-        ret = msg.Effect()
-        ret.effect.kind = kind
-        ret.effect.fluent = self.convert(effect.fluent)
-        ret.effect.value = self.convert(effect.value)
-        ret.effect.condition = self.convert(effect.condition)
+        ret = msgs.EffectExpression()
+        ret.kind = kind
+        ret.fluent = self.convert(effect.fluent)
+        ret.value = self.convert(effect.value)
+        ret.condition = self.convert(effect.condition)
         return ret
 
-#     @handles(model.InstantaneousAction)
-#     def _convert_instantaneous_action(
-#         self, a: model.InstantaneousAction
-#     ) -> Action:
-#         effects = []
-#         conditions = []
-#
-#         for cond in a.preconditions:
-#             conditions.append(
-#                 proto.Condition(
-#                     cond=self.convert(cond),
-#                     span=None,
-#                 )
-#             )
-#
-#         for eff in a.effects:
-#             effects.append(proto.Effect(effect=self.convert(eff), occurrence_time=None))
-#
-#         ret = Action()
-#         ret.name=a.name
-#         ret.parameters=[self.convert(p) for p in a.parameters]
-#         ret.duration=None
-#         ret.conditions=conditions
-#         ret.effects=effects
-#
-#         return ret
+    @handles(model.InstantaneousAction)
+    def _convert_instantaneous_action(
+        self, a: model.InstantaneousAction
+    ) -> msgs.Action:
+        effects = []
+        conditions = []
+
+        for cond in a.preconditions:
+            r2cond = msgs.Condition()
+            r2cond.cond = cond=self.convert(cond)
+            conditions.append(r2cond)
+
+        for eff in a.effects:
+            r2eff = msgs.Effect()
+            r2eff.effect = self.convert(eff)
+            effects.append(r2eff)
+
+        ret = msgs.Action()
+        ret.name=a.name
+        ret.parameters=[self.convert(p) for p in a.parameters]
+        ret.conditions=conditions
+        ret.effects=effects
+
+        return ret
 #
 #     @handles(model.DurativeAction)
 #     def _convert_durative_action(self, a: model.DurativeAction) -> Action:
@@ -405,38 +451,38 @@ class ROS2InterfaceWriter(Converter):
 #         return ret
 #
     @handles(model.timing.Timepoint)
-    def _convert_timepoint(self, tp: model.timing.Timepoint) -> msg.Timepoint:
+    def _convert_timepoint(self, tp: model.timing.Timepoint) -> msgs.Timepoint:
         if tp.kind == TimepointKind.START:
-            kind = msg.Timepoint.START
+            kind = msgs.Timepoint.START
         elif tp.kind == TimepointKind.END:
-            kind = msg.Timepoint.END
+            kind = msgs.Timepoint.END
         elif tp.kind == TimepointKind.GLOBAL_START:
-            kind = msg.Timepoint.GLOBAL_START
+            kind = msgs.Timepoint.GLOBAL_START
         elif tp.kind == TimepointKind.GLOBAL_END:
-            kind = msg.Timepoint.GLOBAL_END
+            kind = msgs.Timepoint.GLOBAL_END
 
-        ret = msg.Timepoint()
+        ret = msgs.Timepoint()
         ret.kind = kind
         ret.container_id = tp.container
         return ret
 
     @handles(model.Timing)
-    def _convert_timing(self, timing: model.Timing) -> msg.Timing:
-        ret = msg.Timing()
+    def _convert_timing(self, timing: model.Timing) -> msgs.Timing:
+        ret = msgs.Timing()
         ret.timepoint = self.convert(timing._timepoint)
         ret.delay = self.convert(fractions.Fraction(timing.delay))
         return ret
 
     @handles(fractions.Fraction)
-    def _convert_fraction(self, fraction: fractions.Fraction) -> msg.Real:
-        ret = msg.Real()
+    def _convert_fraction(self, fraction: fractions.Fraction) -> msgs.Real:
+        ret = msgs.Real()
         ret.numerator = fraction.numerator
         ret.denominator = fraction.denominator
         return ret
 
     @handles(model.timing.Interval)
-    def _convert_interval(self, interval: model.timing.Interval) -> msg.Interval:
-        ret = msg.Interval()
+    def _convert_interval(self, interval: model.timing.Interval) -> msgs.Interval:
+        ret = msgs.Interval()
 
         ret.is_left_open = interval.is_left_open()
         ret.lower = self.convert(interval.lower())
@@ -447,8 +493,8 @@ class ROS2InterfaceWriter(Converter):
     @handles(model.TimeInterval)
     def _convert_time_interval(
         self, interval: model.TimeInterval
-    ) -> msg.TimeInterval:
-        ret = msg.TimeInterval()
+    ) -> msgs.TimeInterval:
+        ret = msgs.TimeInterval()
         ret.is_left_open = interval.is_left_open()
         ret.lower = self.convert(interval.lower)
         ret.is_right_open = interval.is_right_open()
@@ -458,113 +504,118 @@ class ROS2InterfaceWriter(Converter):
     @handles(model.DurationInterval)
     def _convert_duration_interval(
         self, interval: model.DurationInterval
-    ) -> msg.Interval:
-        ret = msg.Interval()
+    ) -> msgs.Interval:
+        ret = msgs.Interval()
         ret.controllable_in_bounds.is_left_open = interval.is_left_open()
         ret.controllable_in_bounds.lower = self.convert(interval.lower)
         ret.controllable_in_bounds.is_right_open = interval.is_right_open()
         ret.controllable_in_bounds.upper = self.convert(interval.upper)
 
         return ret
-#
-#     @handles(model.htn.Task)
-#     def _convert_abstract_task(
-#         self, task: model.htn.Task
-#     ) -> AbstractTaskDeclaration:
-#         ret = AbstractTaskDeclaration()
-#         ret.name=task.name
-#         ret.parameters=[self.convert(p) for p in task.parameters]
-#
-#         return ret
-#
-#     @handles(model.htn.ParameterizedTask)
-#     def _convert_parameterized_task(
-#         self, task: model.htn.ParameterizedTask
-#     ) -> Task:
-#         parameters = []
-#         for p in task.parameters:
-#             aux = Expression()
-#             aux.atom.symbol = p.name
-#             aux.list = []
-#             aux.kind = ExpressionKind.PARAMETER
-#             aux.type = interface_type(p.type)
-#             parameters.append(aux)
-#
-#         ret.Task()
-#         ret.id = ''
-#         ret.task_name = task.task.name
-#         ret.parameters = parameters
-#
-#         return ret
-#
-#     @handles(model.htn.Subtask)
-#     def _convert_subtask(self, subtask: model.htn.Subtask) -> proto.Task:
-#         return proto.Task(
-#             id=subtask.identifier,
-#             task_name=subtask.task.name,
-#             parameters=[self.convert(p) for p in subtask.parameters],
-#         )
-#
-#     @handles(model.htn.Method)
-#     def _convert_method(self, method: model.htn.Method) -> proto.Method:
-#         return proto.Method(
-#             name=method.name,
-#             parameters=[self.convert(p) for p in method.parameters],
-#             achieved_task=self.convert(method.achieved_task),
-#             subtasks=[self.convert(st) for st in method.subtasks],
-#             constraints=[self.convert(c) for c in method.constraints],
-#             conditions=[
-#                 proto.Condition(cond=self.convert(c)) for c in method.preconditions
-#             ],
-#         )
-#
-#     @handles(model.htn.TaskNetwork)
-#     def _convert_task_network(self, tn: model.htn.TaskNetwork) -> proto.TaskNetwork:
-#         return proto.TaskNetwork(
-#             variables=[self.convert(v) for v in tn.variables],
-#             subtasks=[self.convert(st) for st in tn.subtasks],
-#             constraints=[self.convert(c) for c in tn.constraints],
-#         )
-#
-#     def build_hierarchy(
-#         self, problem: model.htn.HierarchicalProblem
-#     ) -> proto.Hierarchy:
-#         return proto.Hierarchy(
-#             initial_task_network=self.convert(problem.task_network),
-#             abstract_tasks=[self.convert(t) for t in problem.tasks],
-#             methods=[self.convert(m) for m in problem.methods],
-#         )
-#
-#     @handles(model.Problem, model.htn.HierarchicalProblem)
-#     def _convert_problem(self, problem: model.Problem) -> proto.Problem:
-#         goals = [proto.Goal(goal=self.convert(g)) for g in problem.goals]
-#         for (t, gs) in problem.timed_goals:
-#             goals += [
-#                 proto.Goal(goal=self.convert(g), timing=self.convert(t)) for g in gs
-#             ]
-#
-#         problem_name = str(problem.name) if problem.name is not None else ''
-#         hierarchy = None
-#         if isinstance(problem, model.htn.HierarchicalProblem):
-#             hierarchy = self.build_hierarchy(problem)
-#
-#         return proto.Problem(
-#             domain_name=problem_name + '_domain',
-#             problem_name=problem_name,
-#             types=[self.convert(t) for t in problem.user_types],
-#             fluents=[self.convert(f, problem) for f in problem.fluents],
-#             objects=[self.convert(o) for o in problem.all_objects],
-#             actions=[self.convert(a) for a in problem.actions],
-#             initial_state=[
-#                 proto.Assignment(fluent=self.convert(x), value=self.convert(v))
-#                 for (x, v) in problem.initial_values.items()
-#             ],
-#             timed_effects=[self.convert(e) for e in problem.timed_effects],
-#             goals=goals,
-#             features=[map_feature(feature) for feature in problem.kind.features],
-#             metrics=[self.convert(m) for m in problem.quality_metrics],
-#             hierarchy=hierarchy,
-#         )
+
+    @handles(model.htn.Task)
+    def _convert_abstract_task(
+        self, task: model.htn.Task
+    ) -> msgs.AbstractTaskDeclaration:
+        ret = msgs.AbstractTaskDeclaration()
+        ret.name=task.name
+        ret.parameters=[self.convert(p) for p in task.parameters]
+        return ret
+
+    @handles(model.htn.ParameterizedTask)
+    def _convert_parameterized_task(
+        self, task: model.htn.ParameterizedTask
+    ) -> msgs.Task:
+        parameters = []
+        for p in task.parameters:
+            aux = Expression()
+            aux.atom.symbol = p.name
+            aux.list = []
+            aux.kind = ExpressionKind.PARAMETER
+            aux.type = interface_type(p.type)
+            parameters.append(aux)
+
+        ret = msgs.Task()
+        ret.id = ''
+        ret.task_name = task.task.name
+        ret.parameters = parameters
+        return ret
+
+    @handles(model.htn.Subtask)
+    def _convert_subtask(self, subtask: model.htn.Subtask) -> msgs.Task:
+        ret = msgs.Task()
+        ret.id = subtask.identifier
+        ret.task_name = subtask.task.name
+        ret.parameters = [self.convert(p) for p in subtask.parameters]
+        return ret
+
+    @handles(model.htn.Method)
+    def _convert_method(self, method: model.htn.Method) -> msgs.Method:
+        ret = msgs.Method()
+        ret.name = method.name
+        ret.parameters = [self.convert(p) for p in method.parameters]
+        ret.achieved_task = self.convert(method.achieved_task)
+        ret.subtasks = [self.convert(st) for st in method.subtasks]
+        ret.constraints = [self.convert(c) for c in method.constraints]
+
+        for c in method.preconditions:
+            cond = msgs.Condition()
+            cond.cond = self.convert(c)
+            ret.conditions.append(cond)
+        return ret
+
+    @handles(model.htn.TaskNetwork)
+    def _convert_task_network(self, tn: model.htn.TaskNetwork) -> msgs.TaskNetwork:
+        ret = msgs.TaskNetwork()
+        ret.variables = [self.convert(v) for v in tn.variables]
+        ret.subtasks = [self.convert(st) for st in tn.subtasks]
+        ret.constraints = [self.convert(c) for c in tn.constraints]
+        return ret
+
+    def build_hierarchy(
+        self, problem: model.htn.HierarchicalProblem
+    ) -> msgs.Hierarchy:
+        ret = msgs.Hierarchy()
+        ret.initial_task_network=self.convert(problem.task_network)
+        ret.abstract_tasks=[self.convert(t) for t in problem.tasks]
+        ret.methods=[self.convert(m) for m in problem.methods]
+        return ret
+
+    @handles(model.Problem, model.htn.HierarchicalProblem)
+    def _convert_problem(self, problem: model.Problem) -> msgs.Problem:
+        goals = [msgs.Goal(goal=self.convert(g)) for g in problem.goals]
+        for (t, gs) in problem.timed_goals:
+            for g in gs:
+                goal = msgs.Goal()
+                goal.goal = self.convert(g)
+                goal.timing.append(self.convert(t))
+                goals += [goal]
+
+        problem_name = str(problem.name) if problem.name is not None else ''
+        hierarchy = []
+        if isinstance(problem, model.htn.HierarchicalProblem):
+            hierarchy.append(self.build_hierarchy(problem))
+
+        ret = msgs.Problem()
+        ret.domain_name = problem_name + '_domain'
+        ret.problem_name = problem_name
+        ret.types = [self.convert(t) for t in problem.user_types]
+        ret.fluents = [self.convert(f, problem) for f in problem.fluents]
+        ret.objects = [self.convert(o) for o in problem.all_objects]
+        ret.actions = [self.convert(a) for a in problem.actions]
+        
+        for (x, v) in problem.initial_values.items():
+            assignment = msgs.Assignment()
+            assignment.fluent = self.convert(x)
+            assignment.value = self.convert(v)
+            ret.initial_state.append(assignment)
+
+        ret.timed_effects=[self.convert(e) for e in problem.timed_effects]
+        ret.goals = goals
+        ret.features = [map_feature(feature) for feature in problem.kind.features]
+        ret.metrics = [self.convert(m) for m in problem.quality_metrics]
+        ret.hierarchy = hierarchy
+        return ret
 #
 #     @handles(model.metrics.MinimizeActionCosts)
 #     def _convert_minimize_action_costs(
@@ -629,8 +680,8 @@ class ROS2InterfaceWriter(Converter):
 #         )
 
     @handles(model.Parameter)
-    def _convert_action_parameter(self, p: model.Parameter) -> msg.Parameter:
-        ret = msg.Parameter()
+    def _convert_action_parameter(self, p: model.Parameter) -> msgs.Parameter:
+        ret = msgs.Parameter()
         ret.name = p.name
         ret.type = interface_type(p.type)
         return ret
@@ -650,12 +701,12 @@ class ROS2InterfaceWriter(Converter):
     @handles(unified_planning.plans.ActionInstance)
     def _convert_action_instance(
         self, a: unified_planning.plans.ActionInstance, start_time=None, end_time=None
-    ) -> msg.ActionInstance:
+    ) -> msgs.ActionInstance:
         parameters = []
         for param in a.actual_parameters:
             # The parameters are atoms
-            parameters.append(self.convert(param).expressions[0].atom)
-        ret = msg.ActionInstance()
+            parameters.append(self.convert(param).expressions[0].atom[0])
+        ret = msgs.ActionInstance()
         ret.action_name = a.action.name
         ret.parameters = parameters
         if bool(start_time) and bool(end_time):
@@ -667,23 +718,23 @@ class ROS2InterfaceWriter(Converter):
         return ret
 
     @handles(str)
-    def _convert_str_atom(self, s: str) -> msg.Atom:
-        ret = msg.Atom()
+    def _convert_str_atom(self, s: str) -> msgs.Atom:
+        ret = msgs.Atom()
         ret.symbol_atom = [s]
         return ret
 
     @handles(unified_planning.plans.SequentialPlan)
     def _convert_sequential_plan(
         self, plan: unified_planning.plans.SequentialPlan
-    ) -> msg.Plan:
-        ret = msg.Plan()
+    ) -> msgs.Plan:
+        ret = msgs.Plan()
         ret.actions = [self.convert(a) for a in plan.actions]
         return ret
 
     @handles(unified_planning.plans.TimeTriggeredPlan)
     def _convert_time_triggered_plan(
         self, plan: unified_planning.plans.TimeTriggeredPlan
-    ) -> msg.Plan:
+    ) -> msgs.Plan:
         action_instances = []
 
         for a in plan.timed_actions:
@@ -693,19 +744,19 @@ class ROS2InterfaceWriter(Converter):
                 a[1], start_time=start_time, end_time=end_time
             )
             action_instances.append(instance)
-        ret = msg.Plan()
+        ret = msgs.Plan()
         ret.actions = action_instances
         return ret
 
     @handles(PlanGenerationResult)
     def _convert_plan_generation_result(
         self, result: PlanGenerationResult
-    ) -> msg.PlanGenerationResult:
+    ) -> msgs.PlanGenerationResult:
         log_messages = None
         if result.log_messages is not None:
             log_messages = [self.convert(log) for log in result.log_messages]
 
-        ret = msg.PlanGenerationResult()
+        ret = msgs.PlanGenerationResult()
         ret.status = self.convert(result.status)
         ret.plan = self.convert(result.plan)
         ret.engine_name = result.engine_name
@@ -724,58 +775,58 @@ class ROS2InterfaceWriter(Converter):
             status
             == unified_planning.engines.PlanGenerationResultStatus.SOLVED_SATISFICING
         ):
-            return msg.PlanGenerationResult.SOLVED_SATISFICING
+            return msgs.PlanGenerationResult.SOLVED_SATISFICING
 
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.SOLVED_OPTIMALLY
         ):
-            return msg.PlanGenerationResult.SOLVED_OPTIMALLY
+            return msgs.PlanGenerationResult.SOLVED_OPTIMALLY
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.UNSOLVABLE_PROVEN
         ):
-            return msg.PlanGenerationResult.UNSOLVABLE_PROVEN
+            return msgs.PlanGenerationResult.UNSOLVABLE_PROVEN
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.UNSOLVABLE_INCOMPLETELY
         ):
-            return msg.PlanGenerationResult.UNSOLVABLE_INCOMPLETELY
+            return msgs.PlanGenerationResult.UNSOLVABLE_INCOMPLETELY
         elif status == unified_planning.engines.PlanGenerationResultStatus.TIMEOUT:
-            return msg.PlanGenerationResult.TIMEOUT
+            return msgs.PlanGenerationResult.TIMEOUT
         elif status == unified_planning.engines.PlanGenerationResultStatus.MEMOUT:
-            return msg.PlanGenerationResult.MEMOUT
+            return msgs.PlanGenerationResult.MEMOUT
         elif (
             status == unified_planning.engines.PlanGenerationResultStatus.INTERNAL_ERROR
         ):
-            return msg.PlanGenerationResult.INTERNAL_ERROR
+            return msgs.PlanGenerationResult.INTERNAL_ERROR
         elif (
             status
             == unified_planning.engines.PlanGenerationResultStatus.UNSUPPORTED_PROBLEM
         ):
 
-            return msg.PlanGenerationResult.UNSUPPORTED_PROBLEM
+            return msgs.PlanGenerationResult.UNSUPPORTED_PROBLEM
         elif status == unified_planning.engines.PlanGenerationResultStatus.INTERMEDIATE:
-            return msg.PlanGenerationResult.INTERMEDIATE
+            return msgs.PlanGenerationResult.INTERMEDIATE
         else:
             raise ValueError('Unknown status: {}'.format(status))
 
     @handles(unified_planning.engines.LogMessage)
     def _convert_log_messages(
         self, log: unified_planning.engines.LogMessage
-    ) -> msg.LogMessage:
+    ) -> msgs.LogMessage:
         if log.level == unified_planning.engines.LogLevel.INFO:
-            level = msg.LogMessage.INFO
+            level = msgs.LogMessage.INFO
         elif log.level == unified_planning.engines.LogLevel.WARNING:
-            level = msg.LogLevel.WARNING
+            level = msgs.LogLevel.WARNING
         elif log.level == unified_planning.engines.LogLevel.ERROR:
-            level = msg.LogMessage.ERROR
+            level = msgs.LogMessage.ERROR
         elif log.level == unified_planning.engines.LogLevel.DEBUG:
-            level = msg.LogMessage.DEBUG
+            level = msgs.LogMessage.DEBUG
         else:
             raise UPException(f'Unknown log level: {log.level}')
 
-        ret = msg.LogMessage()
+        ret = msgs.LogMessage()
         ret.level = level
         ret.message = str(log.message)
         return ret

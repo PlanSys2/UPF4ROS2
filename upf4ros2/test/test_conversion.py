@@ -20,6 +20,7 @@ import unittest
 
 # import unified_planning.model.metrics
 from unified_planning import shortcuts
+from unified_planning.model import Problem
 # from unified_planning.engines import LogMessage, CompilationKind
 # from unified_planning.engines.results import LogLevel
 
@@ -40,8 +41,6 @@ class TestROS2Interfaces(unittest.TestCase):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
-        print('TestROS2Interfaces')
 
         self.problems = get_example_problems()
         from upf4ros2.ros2_interface_reader import ROS2InterfaceReader
@@ -93,27 +92,29 @@ class TestROS2Interfaces(unittest.TestCase):
 
             self.assertEqual(o, o_up)
 
-#     def test_expression(self):
-#         problem = Problem('test')
-#         ex = problem.env.expression_manager.true_expression
-#
-#         ex_pb = self.pb_writer.convert(ex)
-#         ex_up = self.pb_reader.convert(ex_pb, problem)
-#         self.assertEqual(ex, ex_up)
-#
-#         ex = problem.env.expression_manager.Int(10)
-#
-#         ex_pb = self.pb_writer.convert(ex)
-#         ex_up = self.pb_reader.convert(ex_pb, problem)
-#         self.assertEqual(ex, ex_up)
-#
-#     def test_fluent_expressions(self):
-#         problem = self.problems['hierarchical_blocks_world'].problem
-#         problem_pb = self.pb_writer.convert(problem)
-#         problem_up = self.pb_reader.convert(problem_pb)
-#
-#         self.assertEqual(problem, problem_up)
-#
+    def test_expression(self):
+        problem = Problem('test')
+        ex = problem.env.expression_manager.true_expression
+
+        ex_pb = self.pb_writer.convert(ex)
+        ex_up = self.pb_reader.convert(ex_pb, problem)
+        self.assertEqual(ex, ex_up)
+
+        ex = problem.env.expression_manager.Int(10)
+
+        ex_pb = self.pb_writer.convert(ex)
+        ex_up = self.pb_reader.convert(ex_pb, problem)
+        self.assertEqual(ex, ex_up)
+
+    def test_fluent_expressions(self):
+        problem = self.problems['hierarchical_blocks_world'].problem
+
+        print(problem)
+        problem_pb = self.pb_writer.convert(problem)
+        problem_up = self.pb_reader.convert(problem_pb)
+
+        self.assertEqual(problem, problem_up)
+
 #     def test_type_declaration(self):
 #         problem = Problem('test')
 #         ex = UserType('object')

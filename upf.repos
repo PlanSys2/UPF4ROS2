@@ -11,5 +11,3 @@ repositories:
     type: git
     url: https://github.com/aiplan4eu/up-pyperplan.git
     version: c89d825d5c63a1faa43204517b79f2f6c1f341ad
-
-

@@ -8,7 +8,7 @@ upf_msgs/Parameter[] parameters
 
 # If set, the action is durative. Otherwise it is instantaneous.
 # features: DURATIVE_ACTIONS
-upf_msgs/Duration duration
+upf_msgs/Duration[<=1] duration
 
 # Conjunction of conditions that must hold for the action to be applicable.
 upf_msgs/Condition[] conditions
