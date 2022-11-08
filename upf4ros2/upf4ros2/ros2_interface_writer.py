@@ -177,50 +177,70 @@ class FNode2ROS2(walkers.DagWalker):
     def walk_timing_exp(
         self, expression: model.FNode, args: List[msgs.Expression]
     ) -> msgs.Expression:
-        print('walk_object_exp')
-        return msgs.Expression()
-        # timing = expression.timing()
-        # tp = timing.timepoint
-        # if timing.timepoint.container is not None:
-        #     args = [
-        #         Expression(
-        #             atom=proto.Atom(symbol=timing.timepoint.container),
-        #             type='up:container',
-        #             kind=proto.ExpressionKind.Value('CONTAINER_ID'),
-        #         )
-        #     ]
-        # else:
-        #     args = []
-        # if tp.kind == TimepointKind.GLOBAL_START:
-        #     fn = 'up:global_start'
-        # elif tp.kind == TimepointKind.GLOBAL_END:
-        #     fn = 'up:global_end'
-        # elif tp.kind == TimepointKind.START:
-        #     fn = 'up:start'
-        # elif tp.kind == TimepointKind.END:
-        #     fn = 'up:end'
-        # else:
-        #     raise ValueError(f'Unknown timepoint kind: {tp.kind}')
-        # fn_exp = Expression(
-        #     atom=proto.Atom(symbol=fn),
-        #     kind=proto.ExpressionKind.Value('FUNCTION_SYMBOL'),
-        # )
-        # tp_exp = Expression(
-        #     list=[fn_exp] + args,
-        #     type='up:time',
-        #     kind=proto.ExpressionKind.Value('FUNCTION_APPLICATION'),
-        # )
-        # assert timing.delay == 0
-        # return tp_exp
+        timing = expression.timing()
+        tp = timing.timepoint
+        if timing.timepoint.container is not None:
+            item = msgs.ExpressionItem()
+            atom = msgs.Atom()
+            atom.symbol_atom.append(timing.timepoint.container)
+            item.atom.append(atom)
+            item.type='up:container'
+            item.kind = msgs.ExpressionItem.CONTAINER_ID
+            expr = msgs.Expression()
+            expr.expressions.append(item)
+            expr.level.append(0)
+            args = [expr]
+        else:
+            args = []
+        if tp.kind == TimepointKind.GLOBAL_START:
+            fn = 'up:global_start'
+        elif tp.kind == TimepointKind.GLOBAL_END:
+            fn = 'up:global_end'
+        elif tp.kind == TimepointKind.START:
+            fn = 'up:start'
+        elif tp.kind == TimepointKind.END:
+            fn = 'up:end'
+        else:
+            raise ValueError(f'Unknown timepoint kind: {tp.kind}')
+
+        fn_exp_item = msgs.ExpressionItem()
+        fn_atom = msgs.Atom()
+        fn_atom.symbol_atom.append(fn)
+        fn_exp_item.atom.append(fn_atom)
+        fn_exp_item.kind = msgs.ExpressionItem.FUNCTION_SYMBOL
+
+        tp_exp = msgs.Expression()
+        tp_exp_item = msgs.ExpressionItem()
+        tp_atom = msgs.Atom()
+        tp_atom.symbol_atom.append(fn)
+        tp_exp_item.atom.append(fn_atom)
+        tp_exp_item.kind = msgs.ExpressionItem.FUNCTION_APPLICATION
+        tp_exp_item.type = 'up:time'
+        tp_exp.expressions.append(item)
+        tp_exp.level.append(0)
+        
+        tp_exp.expressions.append(fn_exp_item)
+        tp_exp.level.append(1)
+
+        (other_expr, other_levels) =  self.increase_level_expressions(args, 1)
+
+        tp_exp.expressions.extend(other_expr)
+        tp_exp.level.extend(other_levels)
+
+        assert timing.delay == 0
+        return tp_exp
 
     def increase_level_expressions(
-        self, expressions: List[msgs.Expression], incr: int
-    ) -> List[msgs.Expression]:
-        ret = expressions.copy()
-        for expr in ret:
+        self, expressions: List[msgs.Expression], base_level: int
+    ) -> (List[msgs.ExpressionItem], List[int]):
+        ret_expr = []
+        ret_levels = []
+        
+        for expr in expressions:
+            ret_expr.extend(expr.expressions)
             for level in expr.level:
-                level += incr
-        return ret
+                ret_levels.append(level + base_level)
+        return (ret_expr, ret_levels)
 
     def walk_fluent_exp(
         self, expression: model.FNode, args: List[msgs.Expression]
@@ -240,39 +260,44 @@ class FNode2ROS2(walkers.DagWalker):
         ret.expressions.append(item)
         ret.level.append(1)
         
-        ret.expressions.extend(self.increase_level_expressions(args, 1))
-        print(ret)
+        (extended_expr, extended_levels) = self.increase_level_expressions(args, 2)
+
+        ret.expressions.extend(extended_expr)
+        ret.level.extend(extended_levels)
         return ret
 
     @walkers.handles(BOOL_OPERATORS.union(IRA_OPERATORS).union(RELATIONS))
     def walk_operator(
         self, expression: model.FNode, args: List[msgs.Expression]
     ) -> msgs.Expression:
-        print('walk_operator')
-        return msgs.Expression()
-        # sub_list = []
-        # sub_list.append(
-        #     Expression(
-        #         atom=proto.Atom(symbol=map_operator(expression.node_type)),
-        #         list=[],
-        #         kind=proto.ExpressionKind.Value('FUNCTION_SYMBOL'),
-        #         type='up:operator',
-        #     )
-        # )
-        # # forall/exists: add the declared variables from the payload to
-        # # the beginning of the parameter list.
-        # if expression.is_exists() or expression.is_forall():
-        #     sub_list.extend(
-        #         [self._protobuf_writer.convert(p) for p in expression.variables()]
-        #     )
-        #
-        # sub_list.extend(args)
-        # return Expression(
-        #     atom=None,
-        #     list=sub_list,
-        #     kind=proto.ExpressionKind.Value('FUNCTION_APPLICATION'),
-        #     type='',
-        # )
+        sub_list = []
+        expr_item = msgs.ExpressionItem()
+        expr_item.atom.append(msgs.Atom())
+        expr_item.atom[0].symbol_atom.append(map_operator(expression.node_type))
+        expr_item.kind = msgs.ExpressionItem.FUNCTION_SYMBOL
+        expr_item.type = 'up:operator'
+        sub_list.append(expr_item)
+        # forall/exists: add the declared variables from the payload to
+        # the beginning of the parameter list.
+        if expression.is_exists() or expression.is_forall():
+            list_prev = [self._ros2_writer.convert(p) for p in expression.variables()]
+            (other_expr, other_levels) =  self.increase_level_expressions(list_prev, 1)
+
+
+        sub_list.extend(args)
+
+        ret = msgs.Expression()
+        ret.expressions.append(msgs.ExpressionItem())
+        ret.level.append(0)
+        ret.expressions[0].kind = msgs.ExpressionItem.FUNCTION_APPLICATION
+        
+        ret.expressions.append(expr_item)
+        ret.level.append(1)
+
+        ret.expressions.extend(other_expr)
+        ret.level.extend(other_levels)
+
+        return ret
 
 map_features = {
     'ACTION_BASED' : msgs.Problem.ACTION_BASED,
@@ -416,40 +441,37 @@ class ROS2InterfaceWriter(Converter):
         ret.effects=effects
 
         return ret
-#
-#     @handles(model.DurativeAction)
-#     def _convert_durative_action(self, a: model.DurativeAction) -> Action:
-#         effects = []
-#         conditions = []
-#
-#         for span, cond in a.conditions.items():
-#             span = self.convert(span)
-#             for c in cond:
-#                 conditions.append(
-#                     proto.Condition(
-#                         cond=self.convert(c),
-#                         span=span,
-#                     )
-#                 )
-#         for ot, eff in a.effects.items():
-#             ot = self.convert(ot)
-#             for e in eff:
-#                 effects.append(
-#                     proto.Effect(
-#                         effect=self.convert(e),
-#                         occurrence_time=ot,
-#                     )
-#                 )
-#
-#         ret = Action()
-#         ret.name=a.name
-#         ret.parameters=[self.convert(p) for p in a.parameters]
-#         ret.duration=self.convert(a.duration)
-#         ret.conditions=conditions
-#         ret.effects=effects
-#
-#         return ret
-#
+
+    @handles(model.DurativeAction)
+    def _convert_durative_action(self, a: model.DurativeAction) -> msgs.Action:
+        effects = []
+        conditions = []
+
+        for span, cond in a.conditions.items():
+            span = self.convert(span)
+            for c in cond:
+                new_cond = msgs.Condition()
+                new_cond.cond = self.convert(c)
+                new_cond.span = span
+
+                conditions.append(new_cond)
+        for ot, eff in a.effects.items():
+            ot = self.convert(ot)
+            for e in eff:
+                new_eff = msgs.Effect()
+                new_eff.effect = self.convert(e)
+                new_eff.occurrence_time = ot
+
+                effects.append(new_eff)
+        ret = Action()
+        ret.name=a.name
+        ret.parameters=[self.convert(p) for p in a.parameters]
+        ret.duration=self.convert(a.duration)
+        ret.conditions=conditions
+        ret.effects=effects
+
+        return ret
+
     @handles(model.timing.Timepoint)
     def _convert_timepoint(self, tp: model.timing.Timepoint) -> msgs.Timepoint:
         if tp.kind == TimepointKind.START:
@@ -616,68 +638,67 @@ class ROS2InterfaceWriter(Converter):
         ret.metrics = [self.convert(m) for m in problem.quality_metrics]
         ret.hierarchy = hierarchy
         return ret
-#
-#     @handles(model.metrics.MinimizeActionCosts)
-#     def _convert_minimize_action_costs(
-#         self, metric: model.metrics.MinimizeActionCosts
-#     ) -> proto.Metric:
-#         action_costs = {}
-#         for action, cost in metric.costs.items():
-#             action_costs[action.name] = self.convert(cost)
-#
-#         return proto.Metric(
-#             kind=proto.Metric.MINIMIZE_ACTION_COSTS,
-#             action_costs=action_costs,
-#             default_action_cost=self.convert(metric.default)
-#             if metric.default is not None
-#             else None,
-#         )
-#
-#     @handles(model.metrics.MinimizeSequentialPlanLength)
-#     def _convert_minimize_sequential_plan_length(self, _) -> proto.Metric:
-#         return proto.Metric(
-#             kind=proto.Metric.MINIMIZE_SEQUENTIAL_PLAN_LENGTH,
-#         )
-#
-#     @handles(model.metrics.MinimizeMakespan)
-#     def _convert_minimize_makespan(self, _) -> proto.Metric:
-#         return proto.Metric(
-#             kind=proto.Metric.MINIMIZE_MAKESPAN,
-#         )
-#
-#     @handles(model.metrics.MinimizeExpressionOnFinalState)
-#     def _convert_minimize_expression_on_final_state(
-#         self, metric: model.metrics.MinimizeExpressionOnFinalState
-#     ) -> proto.Metric:
-#         return proto.Metric(
-#             kind=proto.Metric.MINIMIZE_EXPRESSION_ON_FINAL_STATE,
-#             expression=self.convert(metric.expression),
-#         )
-#
-#     @handles(model.metrics.MaximizeExpressionOnFinalState)
-#     def _convert_maximize_expression_on_final_state(
-#         self, metric: model.metrics.MaximizeExpressionOnFinalState
-#     ) -> proto.Metric:
-#         return proto.Metric(
-#             kind=proto.Metric.MAXIMIZE_EXPRESSION_ON_FINAL_STATE,
-#             expression=self.convert(metric.expression),
-#         )
-#
-#     @handles(model.metrics.Oversubscription)
-#     def _convert_oversubscription_metric(
-#         self, metric: model.metrics.Oversubscription
-#     ) -> proto.Metric:
-#         goals = []
-#         for g, c in metric.goals.items():
-#             goals.append(
-#                 proto.GoalWithCost(
-#                     goal=self.convert(g), cost=self.convert(fractions.Fraction(c))
-#                 )
-#             )
-#         return proto.Metric(
-#             kind=proto.Metric.OVERSUBSCRIPTION,
-#             goals=goals,
-#         )
+
+    @handles(model.metrics.MinimizeActionCosts)
+    def _convert_minimize_action_costs(
+        self, metric: model.metrics.MinimizeActionCosts
+    ) -> msgs.Metric:
+        action_costs = {}
+        for action, cost in metric.costs.items():
+            action_costs[action.name] = self.convert(cost)
+
+        ret = msgs.Metric()
+        ret.kind = msgs.Metric.MINIMIZE_ACTION_COSTS
+        ret.action_cost_names = action_costs.action_costs.keys()
+        ret.action_cost_expr = action_costs.action_costs.values()
+        if metric.default is not None:
+            ret.default_action_cost = self.convert(metric.default)
+        return ret
+
+    @handles(model.metrics.MinimizeSequentialPlanLength)
+    def _convert_minimize_sequential_plan_length(self, _) -> msgs.Metric:
+        ret = msgs.Metric()
+        ret.kind = msgs.Metric.MINIMIZE_SEQUENTIAL_PLAN_LENGTH
+        return ret
+
+    @handles(model.metrics.MinimizeMakespan)
+    def _convert_minimize_makespan(self, _) -> msgs.Metric:
+        ret = msgs.Metric()
+        ret.kind = msgs.Metric.MINIMIZE_MAKESPAN
+        return ret
+
+    @handles(model.metrics.MinimizeExpressionOnFinalState)
+    def _convert_minimize_expression_on_final_state(
+        self, metric: model.metrics.MinimizeExpressionOnFinalState
+    ) -> msgs.Metric:
+        ret = msgs.Metric()
+        ret.kind = msgs.Metric.MINIMIZE_EXPRESSION_ON_FINAL_STATE
+        ret.expression = self.convert(metric.expression)
+        return ret
+
+    @handles(model.metrics.MaximizeExpressionOnFinalState)
+    def _convert_maximize_expression_on_final_state(
+        self, metric: model.metrics.MaximizeExpressionOnFinalState
+    ) -> msgs.Metric:
+        ret = msgs.Metric()
+        ret.kind = msgs.Metric.MAXIMIZE_EXPRESSION_ON_FINAL_STATE
+        ret.expression = self.convert(metric.expression)
+        return ret
+
+    @handles(model.metrics.Oversubscription)
+    def _convert_oversubscription_metric(
+        self, metric: model.metrics.Oversubscription
+    ) -> msgs.Metric:
+        goals = []
+        for g, c in metric.goals.items():
+            goal = msgs.GoalWithCost()
+            goal.goal=self.convert(g)
+            goal.cost=self.convert(fractions.Fraction(c))
+            goals.append(goal)
+        ret = msgs.Metric()
+        ret.kind = msgs.Metric.OVERSUBSCRIPTION
+        ret.goals = goals
+        return ret      
 
     @handles(model.Parameter)
     def _convert_action_parameter(self, p: model.Parameter) -> msgs.Parameter:
@@ -686,17 +707,18 @@ class ROS2InterfaceWriter(Converter):
         ret.type = interface_type(p.type)
         return ret
 
-#     @handles(model.Variable)
-#     def _convert_expression_variable(
-#         self, variable: model.Variable
-#     ) -> Expression:
-#         # a variable declaration (in forall/exists) is converted directly as an expression
-#         return Expression(
-#             atom=proto.Atom(symbol=variable.name),
-#             list=[],
-#             kind=proto.ExpressionKind.Value('VARIABLE'),
-#             type=proto_type(variable.type),
-#         )
+    @handles(model.Variable)
+    def _convert_expression_variable(
+        self, variable: model.Variable
+    ) -> msgs.Expression:
+        ret = msgs.Expression()
+        ret.expressions.append(msgs.ExpressionItem())
+        ret.level.append(0)
+        ret.expressions[0].atom.append(msgs.Atom())
+        ret.expressions[0].atom[0].symbol_atom.append(variable.name)
+        ret.expressions[0].kind = msgs.ExpressionItem.VARIABLE
+        ret.expressions[0].type = interface_type(variable.type)
+        return ret
 
     @handles(unified_planning.plans.ActionInstance)
     def _convert_action_instance(
@@ -830,63 +852,64 @@ class ROS2InterfaceWriter(Converter):
         ret.level = level
         ret.message = str(log.message)
         return ret
-#
-#     @handles(unified_planning.engines.CompilerResult)
-#     def _convert_compiler_result(
-#         self, result: unified_planning.engines.CompilerResult
-#     ) -> proto.CompilerResult:
-#         map: Dict[str, proto.ActionInstance] = {}
-#         log_messages = result.log_messages
-#         if log_messages is None:
-#             log_messages = []
-#         if result.map_back_action_instance is not None:
-#             for compiled_action in result.problem.actions:
-#                 type_list = [param.type for param in compiled_action.parameters]
-#                 if len(type_list) == 0:
-#                     ai = unified_planning.plans.ActionInstance(compiled_action)
-#                     map[str(ai)] = self.convert(result.map_back_action_instance(ai))
-#                     continue
-#                 ground_size = 1
-#                 domain_sizes = []
-#                 for t in type_list:
-#                     ds = domain_size(result.problem, t)
-#                     domain_sizes.append(ds)
-#                     ground_size *= ds
-#                 items_list: List[List[FNode]] = []
-#                 for size, type in zip(domain_sizes, type_list):
-#                     items_list.append(
-#                         [domain_item(result.problem, type, j) for j in range(size)]
-#                     )
-#                 grounded_params_list = product(*items_list)
-#                 for grounded_params in grounded_params_list:
-#                     ai = unified_planning.plans.ActionInstance(
-#                         compiled_action, tuple(grounded_params)
-#                     )
-#                     map[str(ai)] = self.convert(result.map_back_action_instance(ai))
-#         return proto.CompilerResult(
-#             problem=self.convert(result.problem),
-#             map_back_plan=map,
-#             log_messages=[self.convert(log) for log in log_messages],
-#             engine=proto.Engine(name=result.engine_name),
-#         )
-#
-#     @handles(unified_planning.engines.ValidationResult)
-#     def _convert_validation_result(
-#         self, result: unified_planning.engines.ValidationResult
-#     ) -> proto.ValidationResult:
-#         return proto.ValidationResult(
-#             status=self.convert(result.status),
-#             log_messages=[self.convert(log) for log in result.log_messages],
-#             engine=proto.Engine(name=result.engine_name),
-#         )
-#
-#     @handles(unified_planning.engines.ValidationResultStatus)
-#     def _convert_validation_result_status(
-#         self, status: unified_planning.engines.ValidationResultStatus
-#     ) -> proto.ValidationResult.ValidationResultStatus:
-#         if status == unified_planning.engines.ValidationResultStatus.VALID:
-#             return proto.ValidationResult.ValidationResultStatus.Value('VALID')
-#         elif status == unified_planning.engines.ValidationResultStatus.INVALID:
-#             return proto.ValidationResult.ValidationResultStatus.Value('INVALID')
-#         else:
-#             raise UPException(f'Unknown result status: {status}')
+
+    @handles(unified_planning.engines.CompilerResult)
+    def _convert_compiler_result(
+        self, result: unified_planning.engines.CompilerResult
+    ) -> msgs.CompilerResult:
+        map: Dict[str, proto.ActionInstance] = {}
+        log_messages = result.log_messages
+        if log_messages is None:
+            log_messages = []
+        if result.map_back_action_instance is not None:
+            for compiled_action in result.problem.actions:
+                type_list = [param.type for param in compiled_action.parameters]
+                if len(type_list) == 0:
+                    ai = unified_planning.plans.ActionInstance(compiled_action)
+                    map[str(ai)] = self.convert(result.map_back_action_instance(ai))
+                    continue
+                ground_size = 1
+                domain_sizes = []
+                for t in type_list:
+                    ds = domain_size(result.problem, t)
+                    domain_sizes.append(ds)
+                    ground_size *= ds
+                items_list: List[List[FNode]] = []
+                for size, type in zip(domain_sizes, type_list):
+                    items_list.append(
+                        [domain_item(result.problem, type, j) for j in range(size)]
+                    )
+                grounded_params_list = product(*items_list)
+                for grounded_params in grounded_params_list:
+                    ai = unified_planning.plans.ActionInstance(
+                        compiled_action, tuple(grounded_params)
+                    )
+                    map[str(ai)] = self.convert(result.map_back_action_instance(ai))
+        ret = msgs.CompilerResult()
+        ret.problem = self.convert(result.problem)
+        ret.map_back_plan_keys = map.keys()
+        ret.map_back_plan_values = map.values()
+        ret.log_messages=[self.convert(log) for log in log_messages]
+        ret.engine = result.engine_name
+        return ret
+
+    @handles(unified_planning.engines.ValidationResult)
+    def _convert_validation_result(
+        self, result: unified_planning.engines.ValidationResult
+    ) -> msgs.ValidationResult:
+        ret = msgs.ValidationResult()
+        ret.status = self.convert(result.status)
+        ret.log_messages = [self.convert(log) for log in result.log_messages]
+        ret.engine = result.engine_name
+        return ret
+
+    @handles(unified_planning.engines.ValidationResultStatus)
+    def _convert_validation_result_status(
+        self, status: unified_planning.engines.ValidationResultStatus
+    ) -> int:
+        if status == unified_planning.engines.ValidationResultStatus.VALID:
+            return msg.ValidationResult.VALID
+        elif status == unified_planning.engines.ValidationResultStatus.INVALID:
+            return msg.ValidationResult.INVALID
+        else:
+            raise UPException(f'Unknown result status: {status}')
