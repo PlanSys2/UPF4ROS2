@@ -67,9 +67,9 @@ class TestROS2Interfaces(unittest.TestCase):
         problem = self.problems['robot'].problem
 
         for f in problem.fluents:
-            print(f)
+            # print(f)
             f_pb = self.pb_writer.convert(f, problem)
-            print(f_pb)
+            # print(f_pb)
             f_up = self.pb_reader.convert(f_pb, problem)
             self.assertEqual(f, f_up)
 
@@ -299,7 +299,7 @@ class TestROS2InterfacesProblems(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        print('TestROS2InterfacesProblems')
+        # print('TestROS2InterfacesProblems')
 
         self.problems = get_example_problems()
         from upf4ros2.ros2_interface_reader import ROS2InterfaceReader

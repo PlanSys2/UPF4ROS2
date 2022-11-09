@@ -360,6 +360,10 @@ class ROS2InterfaceWriter(Converter):
         ret.parameters = sig
         if fluent in problem.fluents_defaults:
             ret.default_value.append(self.convert(problem.fluents_defaults[fluent]))
+            # print("************************************************************************")
+            # print(fluent)
+            # print(ret)
+            # print("************************************************************************")
         return ret
 
     @handles(model.Object)
@@ -412,8 +416,16 @@ class ROS2InterfaceWriter(Converter):
 
         ret = msgs.EffectExpression()
         ret.kind = kind
+
         ret.fluent = self.convert(effect.fluent)
+        # print("=========================================================================================")
+        # print(effect.value)
+        # print(type(effect.value))
+
         ret.value = self.convert(effect.value)
+        # print(ret.value)
+        # print(type(ret.value))
+        # print("=========================================================================================")
         ret.condition = self.convert(effect.condition)
         return ret
 
@@ -435,10 +447,14 @@ class ROS2InterfaceWriter(Converter):
             effects.append(r2eff)
 
         ret = msgs.Action()
-        ret.name=a.name
-        ret.parameters=[self.convert(p) for p in a.parameters]
-        ret.conditions=conditions
-        ret.effects=effects
+        ret.name = a.name
+        ret.parameters = [self.convert(p) for p in a.parameters]
+        ret.conditions = conditions
+
+        # print("*****************************************************************")
+        ret.effects = effects
+        # print(ret.effects)
+        # print("*****************************************************************")
 
         return ret
 

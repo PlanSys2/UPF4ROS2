@@ -1,17 +1,17 @@
 # Copyright 2022 Intelligent Robotics Lab
-#
+# 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
-#
+# 
 #     http://www.apache.org/licenses/LICENSE-2.0
-#
+# 
 # Unless required by applicable law or agreed to in writing, software
 # distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
-#
+# 
 
 # This module started from the proto_reader.py module from the
 # AIPlan4EU project, with the same license
@@ -25,7 +25,7 @@ from typing import OrderedDict
 from unified_planning import model
 from unified_planning.exceptions import UPException
 from unified_planning import Environment
-# from unified_planning.model import metrics
+from unified_planning.model import metrics
 from unified_planning.model import (
     DurativeAction,
     Effect,
@@ -38,7 +38,7 @@ from unified_planning.model import (
 from unified_planning.model.operators import OperatorKind
 import unified_planning.plans
 from upf4ros2.converter import Converter, handles
-# from unified_planning.model.effect import EffectKind
+from unified_planning.model.effect import EffectKind
 
 from upf_msgs import msg as msgs
 
@@ -105,7 +105,8 @@ class ROS2InterfaceReader(Converter):
     def _convert_parameter(
         self, msg: msgs.Parameter, problem: Problem
     ) -> model.Parameter:
-        print("@handles(msgs.Parameter)")
+        # print("@handles(msgs.Parameter)")
+        # print(msg)
         return model.Parameter(
             msg.name, convert_type_str(msg.type, problem), problem.env
         )
@@ -113,7 +114,8 @@ class ROS2InterfaceReader(Converter):
     @handles(msgs.Fluent)
     def _convert_fluent(self, msg: msgs.Fluent, problem: Problem) -> Fluent:
         value_type: model.types.Type = convert_type_str(msg.value_type, problem)
-        print("@handles(msgs.Fluent)")
+        # print("@handles(msgs.Fluent)")
+        # print(msg)
         sig: list = []
         for p in msg.parameters:
             sig.append(self.convert(p, problem))
@@ -124,28 +126,30 @@ class ROS2InterfaceReader(Converter):
     def _convert_object(
         self, msg: msgs.ObjectDeclaration, problem: Problem
     ) -> model.Object:
-        print("@handles(msgs.ObjectDeclaration)")
+        # print("@handles(msgs.ObjectDeclaration)")
+        # print(msg)
         return model.Object(msg.name, convert_type_str(msg.type, problem))
 
     @handles(msgs.ExpressionItem)
     def _convert_expressionitem(
         self, msg: msgs.ExpressionItem, problem: Problem
     ) -> model.Expression:
-        print("@handles(msgs.ExpressionItem)")
+        # print("@handles(msgs.ExpressionItem)")
+        # print(msg)
         if msg.kind == msgs.ExpressionItem.CONSTANT:
             return self.convert(msg.atom[0], problem)
 
         elif msg.kind == msgs.ExpressionItem.PARAMETER:
             return problem.env.expression_manager.ParameterExp(
                 param=Parameter(
-                    msg.atom[0].symbol,
+                    msg.atom[0].symbol_atom[0],
                     convert_type_str(msg.type, problem), problem.env
                 ),
             )
         elif msg.kind == msgs.ExpressionItem.VARIABLE:
             return problem.env.expression_manager.VariableExp(
                 var=Variable(
-                    msg.atom[0].symbol,
+                    msg.atom[0].symbol_atom[0],
                     convert_type_str(msg.atom[0].type, problem), problem.env
                 ),
             )
@@ -157,7 +161,7 @@ class ROS2InterfaceReader(Converter):
             if fluent.kind == msgs.ExpressionItem.FLUENT_SYMBOL:
                 payload = self.convert(fluent.atom[0], problem)
 
-            print([print(m) for m in msg.expressions])
+            # print([print(m) for m in msg.expressions])
             args.extend([self.convert(m, problem) for m in msg.expressions])
             if payload is not None:
                 return problem.env.expression_manager.FluentExp(payload, tuple(args))
@@ -169,12 +173,10 @@ class ROS2InterfaceReader(Converter):
     def _convert_expression(
         self, msg: msgs.Expression, problem: Problem
     ) -> model.Expression:
-        print("@handles(msgs.Expression)")
-        
-        if len(msg.expressions) == 0:
-            print(msg)
-        current_expr = msg.expressions.pop(0)
-        current_level = msg.level.pop(0)
+        current_index = 0
+        current_expr = msg.expressions[current_index]
+        current_level = msg.level[current_index]
+        current_index += 1
 
         if current_expr.kind == msgs.ExpressionItem.CONSTANT:
             assert len(current_expr.atom) > 0
@@ -182,27 +184,37 @@ class ROS2InterfaceReader(Converter):
         elif current_expr.kind == msgs.ExpressionItem.PARAMETER:
             return problem.env.expression_manager.ParameterExp(
                 param = Parameter(
-                    current_expr.atom[0].symbol_atom,
+                    current_expr.atom[0].symbol_atom[0],
                     convert_type_str(current_expr.type, problem), problem.env
                 ),
             )
         elif current_expr.kind == msgs.ExpressionItem.VARIABLE:
             return problem.env.expression_manager.VariableExp(
                 var=Variable(
-                    current_expr.atom[0].symbol_atom,
+                    current_expr.atom[0].symbol_atom[0],
                     convert_type_str(current_expr.type, problem), problem.env
                 ),
             )
-        elif msg.kind == proto.ExpressionKind.Value("STATE_VARIABLE"):
+        elif current_expr.kind == msgs.ExpressionItem.STATE_VARIABLE:
             args = []
             payload = None
 
-            fluent = msg.list.pop(0)
-            if fluent.kind == proto.ExpressionKind.Value("FLUENT_SYMBOL"):
-                payload = self.convert(fluent.atom, problem)
+            fluent = msg.expressions[current_index]
+            fluent_level = msg.level[current_index]
+            current_index += 1
 
-            # args.extend([self.convert(m, problem) for m in msg.list])
+            print(fluent)
+
+            if fluent.kind == msgs.ExpressionItem.FLUENT_SYMBOL:
+                payload = self.convert(fluent.atom[0], problem)
+            
+            while current_index < len(msg.level) and msg.level[current_index] >= fluent_level:
+                args.append(self.convert(msg.expressions[current_index], problem))
+                current_index += 1
+            
             if payload is not None:
+                print(payload)
+                print(args)
                 a = problem.env.expression_manager.FluentExp(payload, tuple(args))
                 print (a)
                 return a
@@ -282,8 +294,9 @@ class ROS2InterfaceReader(Converter):
     def _convert_atom(
         self, msg: msgs.Atom, problem: Problem
     ) -> Union[model.FNode, model.Fluent, model.Object]:
-        print("@handles(msgs.Atom)")
+        # print("@handles(msgs.Atom)")
         # print(msg)
+        # # print(msg)
         if len(msg.int_atom) > 0:
             return problem.env.expression_manager.Int(msg.int_atom[0])
         elif len(msg.real_atom) > 0:
@@ -309,7 +322,8 @@ class ROS2InterfaceReader(Converter):
     def _convert_type_declaration(
         self, msg: msgs.TypeDeclaration, problem: Problem
     ) -> model.Type:
-        print("@handles(msgs.TypeDeclaration)")
+        # print("@handles(msgs.TypeDeclaration)")
+        # print(msg)
         if msg.type_name == 'up:bool':
             return problem.env.type_manager.BoolType()
         elif msg.type_name.startswith('up:integer['):
@@ -335,25 +349,49 @@ class ROS2InterfaceReader(Converter):
     def _convert_problem(
         self, msg: msgs.Problem, env: Optional[Environment] = None
     ) -> Problem:
-        print("@handles(msgs.Problem)")
+        # print("@handles(msgs.Problem)")
+        # print("=========================================================================1")
+        # print(msg)
+        # print("=========================================================================1")
         problem_name = str(msg.problem_name) if str(msg.problem_name) != '' else None
         if len(msg.hierarchy) > 0:
             problem = model.htn.HierarchicalProblem(name=problem_name, env=env)
         else:
             problem = Problem(name=problem_name, env=env)
 
+        # print("=========================================================================2")
+        # print(msg)
+        # print("=========================================================================2")
         for t in msg.types:
             problem._add_user_type(self.convert(t, problem))
+        # print("=========================================================================3")
+        # print(msg)
+        # print("=========================================================================3")
         for obj in msg.objects:
             problem.add_object(self.convert(obj, problem))
+        # print("=========================================================================4")
+        # print(msg)
+        # print("=========================================================================4")
         for f in msg.fluents:
+            # print("=========================================================================4.1")
+            # print(msg)
+            # print("=========================================================================4.1")
+            # print("=========================================================================4.5")
+            # print(f)
+            # print("=========================================================================4.5")
             problem.add_fluent(
                 self.convert(f, problem),
                 default_initial_value=self.convert(f.default_value[0], problem)
                 if len(f.default_value) > 0
                 else None,
             )
+        # print("=========================================================================5")
+        # print(msg)
+        # print("=========================================================================5")
         for f in msg.actions:
+            print("===============================")
+            print(f)
+            print("===============================")
             problem.add_action(self.convert(f, problem))
         for eff in msg.timed_effects:
             ot = self.convert(eff.occurrence_time, problem)
@@ -382,124 +420,127 @@ class ROS2InterfaceReader(Converter):
         for metric in msg.metrics:
             problem.add_quality_metric(self.convert(metric, problem))
 
-        if msg.HasField('hierarchy'):
-            for task in msg.hierarchy.abstract_tasks:
+        if len(msg.hierarchy) > 0:
+            for task in msg.hierarchy[0].abstract_tasks:
                 problem.add_task(self.convert(task, problem))
-            for method in msg.hierarchy.methods:
+            for method in msg.hierarchy[0].methods:
                 problem.add_method(self.convert(method, problem))
             problem._initial_task_network = self.convert(
-                msg.hierarchy.initial_task_network, problem
+                msg.hierarchy[0].initial_task_network, problem
             )
 
         return problem
-# 
-#     @handles(proto.AbstractTaskDeclaration)
-#     def _convert_abstract_task(
-#         self, msg: proto.AbstractTaskDeclaration, problem: Problem
-#     ):
-#         return model.htn.Task(
-#             msg.name, [self.convert(p, problem) for p in msg.parameters], problem.env
-#         )
-#
-#     @handles(proto.Task)
-#     def _convert_task(
-#         self, msg: proto.Task, problem: model.htn.HierarchicalProblem
-#     ) -> model.htn.Subtask:
-#         if problem.has_task(msg.task_name):
-#             task = problem.get_task(msg.task_name)
-#         elif problem.has_action(msg.task_name):
-#             task = problem.action(msg.task_name)
-#         else:
-#             raise ValueError(f'Unknown task name: {msg.task_name}')
-#         parameters = [self.convert(p, problem) for p in msg.parameters]
-#         return model.htn.Subtask(task, *parameters, ident=msg.id, _env=problem.env)
-#
-#     @handles(proto.Method)
-#     def _convert_method(
-#         self, msg: proto.Method, problem: model.htn.HierarchicalProblem
-#     ) -> model.htn.Method:
-#         method = model.htn.Method(
-#             msg.name,
-#             [self.convert(p, problem) for p in msg.parameters],
-#             problem.env,
-#         )
-#         achieved_task_params = []
-#         for p in msg.achieved_task.parameters:
-#             achieved_task_params.append(method.parameter(p.atom.symbol))
-#         method.set_task(
-#             problem.get_task(msg.achieved_task.task_name), *achieved_task_params
-#         )
-#         for st in msg.subtasks:
-#             method.add_subtask(self.convert(st, problem))
-#         for c in msg.constraints:
-#             method.add_constraint(self.convert(c, problem))
-#         for c in msg.conditions:
-#             assert not c.HasField('span'), 'Timed conditions are currently unsupported.'
-#             method.add_precondition(self.convert(c.cond, problem))
-#         return method
-#
-#     @handles(proto.TaskNetwork)
-#     def _convert_task_network(
-#         self, msg: proto.TaskNetwork, problem: model.htn.HierarchicalProblem
-#     ) -> model.htn.TaskNetwork:
-#         tn = model.htn.TaskNetwork(problem.env)
-#         for v in msg.variables:
-#             tn.add_variable(v.name, convert_type_str(v.type, problem))
-#         for st in msg.subtasks:
-#             tn.add_subtask(self.convert(st, problem))
-#         for c in msg.constraints:
-#             tn.add_constraint(self.convert(c, problem))
-#
-#         return tn
-#
-#     @handles(proto.Metric)
-#     def _convert_metric(
-#         self, msg: proto.Metric, problem: Problem
-#     ) -> Union[
-#         metrics.MinimizeActionCosts,
-#         metrics.MinimizeSequentialPlanLength,
-#         metrics.MinimizeMakespan,
-#         metrics.MinimizeExpressionOnFinalState,
-#         metrics.MaximizeExpressionOnFinalState,
-#         metrics.Oversubscription,
-#     ]:
-#         if msg.kind == proto.Metric.MINIMIZE_ACTION_COSTS:
-#             costs = {}
-#             for a, cost in msg.action_costs.items():
-#                 costs[problem.action(a)] = self.convert(cost, problem)
-#             return metrics.MinimizeActionCosts(
-#                 costs=costs,
-#                 default=self.convert(msg.default_action_cost, problem)
-#                 if msg.HasField('default_action_cost')
-#                 else None,
-#             )
-#
-#         elif msg.kind == proto.Metric.MINIMIZE_SEQUENTIAL_PLAN_LENGTH:
-#             return metrics.MinimizeSequentialPlanLength()
-#
-#         elif msg.kind == proto.Metric.MINIMIZE_MAKESPAN:
-#             return metrics.MinimizeMakespan()
-#
-#         elif msg.kind == proto.Metric.MINIMIZE_EXPRESSION_ON_FINAL_STATE:
-#             return metrics.MinimizeExpressionOnFinalState(
-#                 expression=self.convert(msg.expression, problem)
-#             )
-#
-#         elif msg.kind == proto.Metric.MAXIMIZE_EXPRESSION_ON_FINAL_STATE:
-#             return metrics.MaximizeExpressionOnFinalState(
-#                 expression=self.convert(msg.expression, problem)
-#             )
-#         elif msg.kind == proto.Metric.OVERSUBSCRIPTION:
-#             goals = {}
-#             for g in msg.goals:
-#                 goals[self.convert(g.goal, problem)] = self.convert(g.cost)
-#             return metrics.Oversubscription(goals)
-#         else:
-#             raise UPException(f'Unknown metric kind `{msg.kind}`')
-#
+ 
+    @handles(msgs.AbstractTaskDeclaration)
+    def _convert_abstract_task(
+        self, msg: msgs.AbstractTaskDeclaration, problem: Problem
+    ):
+        return model.htn.Task(
+            msg.name, [self.convert(p, problem) for p in msg.parameters], problem.env
+        )
+
+    @handles(msgs.Task)
+    def _convert_task(
+        self, msg: msgs.Task, problem: model.htn.HierarchicalProblem
+    ) -> model.htn.Subtask:
+        if problem.has_task(msg.task_name):
+            task = problem.get_task(msg.task_name)
+        elif problem.has_action(msg.task_name):
+            task = problem.action(msg.task_name)
+        else:
+            raise ValueError(f'Unknown task name: {msg.task_name}')
+        parameters = [self.convert(p, problem) for p in msg.parameters]
+        return model.htn.Subtask(task, *parameters, ident=msg.id, _env=problem.env)
+
+    @handles(msgs.Method)
+    def _convert_method(
+        self, msg: msgs.Method, problem: model.htn.HierarchicalProblem
+    ) -> model.htn.Method:
+        method = model.htn.Method(
+            msg.name,
+            [self.convert(p, problem) for p in msg.parameters],
+            problem.env,
+        )
+        achieved_task_params = []
+        for p in msg.achieved_task.parameters:
+            achieved_task_params.append(method.parameter(p.atom.symbol))
+        method.set_task(
+            problem.get_task(msg.achieved_task.task_name), *achieved_task_params
+        )
+        for st in msg.subtasks:
+            method.add_subtask(self.convert(st, problem))
+        for c in msg.constraints:
+            method.add_constraint(self.convert(c, problem))
+        for c in msg.conditions:
+            assert not c.HasField('span'), 'Timed conditions are currently unsupported.'
+            method.add_precondition(self.convert(c.cond, problem))
+        return method
+
+    @handles(msgs.TaskNetwork)
+    def _convert_task_network(
+        self, msg: msgs.TaskNetwork, problem: model.htn.HierarchicalProblem
+    ) -> model.htn.TaskNetwork:
+        tn = model.htn.TaskNetwork(problem.env)
+        for v in msg.variables:
+            tn.add_variable(v.name, convert_type_str(v.type, problem))
+        for st in msg.subtasks:
+            tn.add_subtask(self.convert(st, problem))
+        for c in msg.constraints:
+            tn.add_constraint(self.convert(c, problem))
+
+        return tn
+
+    @handles(msgs.Metric)
+    def _convert_metric(
+        self, msg: msgs.Metric, problem: Problem
+    ) -> Union[
+        metrics.MinimizeActionCosts,
+        metrics.MinimizeSequentialPlanLength,
+        metrics.MinimizeMakespan,
+        metrics.MinimizeExpressionOnFinalState,
+        metrics.MaximizeExpressionOnFinalState,
+        metrics.Oversubscription,
+    ]:
+        if msg.kind == msgs.Metric.MINIMIZE_ACTION_COSTS:
+            costs = {}
+            for a, cost in msg.action_costs.items():
+                costs[problem.action(a)] = self.convert(cost, problem)
+            return metrics.MinimizeActionCosts(
+                costs=costs,
+                default=self.convert(msg.default_action_cost[0], problem)
+                if len(msg.default_action_cost) > 0
+                else None,
+            )
+
+        elif msg.kind == msgs.Metric.MINIMIZE_SEQUENTIAL_PLAN_LENGTH:
+            return metrics.MinimizeSequentialPlanLength()
+
+        elif msg.kind == msgs.Metric.MINIMIZE_MAKESPAN:
+            return metrics.MinimizeMakespan()
+
+        elif msg.kind == msgs.Metric.MINIMIZE_EXPRESSION_ON_FINAL_STATE:
+            return metrics.MinimizeExpressionOnFinalState(
+                expression=self.convert(msg.expression, problem)
+            )
+
+        elif msg.kind == msgs.Metric.MAXIMIZE_EXPRESSION_ON_FINAL_STATE:
+            return metrics.MaximizeExpressionOnFinalState(
+                expression=self.convert(msg.expression, problem)
+            )
+        elif msg.kind == msgs.Metric.OVERSUBSCRIPTION:
+            goals = {}
+            for g in msg.goals:
+                goals[self.convert(g.goal, problem)] = self.convert(g.cost)
+            return metrics.Oversubscription(goals)
+        else:
+            raise UPException(f'Unknown metric kind `{msg.kind}`')
+
     @handles(msgs.Action)
     def _convert_action(self, msg: msgs.Action, problem: Problem) -> model.Action:
-        print("@handles(msgs.Action)")
+        # print("@handles(msgs.Action)")
+        # print("=================================================================1")
+        # print(msg)
+        # print("=================================================================1")
         action: model.Action
 
         parameters = OrderedDict()
@@ -514,6 +555,9 @@ class ROS2InterfaceReader(Converter):
 
         conditions = []
         for condition in msg.conditions:
+            print("++++++++++++++++++++++++++++++++")
+            print(condition)
+            print("++++++++++++++++++++++++++++++++")
             cond = self.convert(condition.cond, problem)
             span = self.convert(condition.span[0]) if len(condition.span) > 0 else None
             conditions.append((cond, span))
@@ -551,30 +595,45 @@ class ROS2InterfaceReader(Converter):
 
         return action
 
-#     @handles(proto.EffectExpression)
-#     def _convert_effect(
-#         self, msg: proto.EffectExpression, problem: Problem
-#     ) -> model.Effect:
-#         # EffectKind
-#         if msg.kind == proto.EffectExpression.EffectKind.Value('INCREASE'):
-#             kind = EffectKind.INCREASE
-#         elif msg.kind == proto.EffectExpression.EffectKind.Value('DECREASE'):
-#             kind = EffectKind.DECREASE
-#         else:
-#             kind = EffectKind.ASSIGN
-#
-#         return Effect(
-#             fluent=self.convert(msg.fluent, problem),
-#             value=self.convert(msg.value, problem),
-#             condition=self.convert(msg.condition, problem),
-#             kind=kind,
-#         )
+    @handles(msgs.EffectExpression)
+    def _convert_effect(
+        self, msg: msgs.EffectExpression, problem: Problem
+    ) -> model.Effect:
+        # EffectKind
+        if msg.kind == msgs.EffectExpression.INCREASE:
+            kind = EffectKind.INCREASE
+        elif msg.kind == msgs.EffectExpression.DECREASE:
+            kind = EffectKind.DECREASE
+        else:
+            kind = EffectKind.ASSIGN
+
+
+        fluent=self.convert(msg.fluent, problem)
+
+        msg.condition.expressions[0].atom[0].symbol_atom.append("hola")
+        # print("+++++++++++++++++++++")
+        # print(msg.condition)
+        # print("+++++++++++++++++++++")
+        # print("--------------------")
+        # print(msg.value)
+        # print("--------------------")
+        condition=self.convert(msg.condition, problem)
+        value=self.convert(msg.value, problem)
+
+
+        return Effect(
+            fluent=fluent,
+            value=value,
+            condition=condition,
+            kind=kind,
+        )
 
     @handles(msgs.Duration)
     def _convert_duration(
         self, msg: msgs.Duration, problem: Problem
     ) -> model.timing.DurationInterval:
-        print("@handles(msgs.Duration)")
+        # print("@handles(msgs.Duration)")
+        # print(msg)
         return model.timing.DurationInterval(
             lower=self.convert(msg.controllable_in_bounds.lower, problem),
             upper=self.convert(msg.controllable_in_bounds.upper, problem),
@@ -584,7 +643,8 @@ class ROS2InterfaceReader(Converter):
 
     @handles(msgs.TimeInterval)
     def _convert_timed_interval(self, msg: msgs.TimeInterval) -> model.TimeInterval:
-        print("@handles(msgs.TimeInterval)")
+        # print("@handles(msgs.TimeInterval)")
+        # print(msg)
         return model.TimeInterval(
             lower=self.convert(msg.lower),
             upper=self.convert(msg.upper),
@@ -594,7 +654,8 @@ class ROS2InterfaceReader(Converter):
 
     @handles(msgs.Timing)
     def _convert_timing(self, msg: msgs.Timing) -> model.timing.Timing:
-        print("@handles(msgs.Timing)")
+        # print("@handles(msgs.Timing)")
+        # print(msg)
         return model.Timing(
             delay=self.convert(msg.delay)
             if msg.HasField('delay')
@@ -604,12 +665,14 @@ class ROS2InterfaceReader(Converter):
 
     @handles(msgs.Real)
     def _convert_real(self, msg: msgs.Real) -> fractions.Fraction:
-        print("@handles(msgs.Real)")
+        # print("@handles(msgs.Real)")
+        # print(msg)
         return fractions.Fraction(msg.numerator, msg.denominator)
 
     @handles(msgs.Timepoint)
     def _convert_timepoint(self, msg: msgs.Timepoint) -> model.timing.Timepoint:
-        print("@handles(msgs.Timepoint)")
+        # print("@handles(msgs.Timepoint)")
+        # print(msg)
         if msg.kind == msgs.Timepoint.GLOBAL_START:
             kind = model.timing.TimepointKind.GLOBAL_START
         elif msg.kind == msgs.Timepoint.GLOBAL_END:
@@ -627,7 +690,8 @@ class ROS2InterfaceReader(Converter):
     def _convert_plan(
         self, msg: msgs.Plan, problem: Problem
     ) -> unified_planning.plans.Plan:
-        print("@handles(msgs.Plan)")
+        # print("@handles(msgs.Plan)")
+        # print(msg)
         actions = [self.convert(a, problem) for a in msg.actions]
         if all(isinstance(a, tuple) for a in actions):
             return unified_planning.plans.TimeTriggeredPlan(actions)
@@ -645,7 +709,8 @@ class ROS2InterfaceReader(Converter):
         ],
         unified_planning.plans.ActionInstance,
     ]:
-        print("@handles(msgs.ActionInstance)")
+        # print("@handles(msgs.ActionInstance)")
+        # print(msg)
         # action instance parameters are atoms but in UP they are FNodes
         # converting to up.model.FNode
         parameters = tuple([self.convert(param, problem) for param in msg.parameters])
@@ -672,7 +737,8 @@ class ROS2InterfaceReader(Converter):
     def _convert_plan_generation_result(
         self, result: msgs.PlanGenerationResult, problem: Problem
     ) -> unified_planning.engines.PlanGenerationResult:
-        print("@handles(msgs.PlanGenerationResult)")
+        # print("@handles(msgs.PlanGenerationResult)")
+        # print(msg)
         if result.status == msgs.PlanGenerationResult.SOLVED_SATISFICING:
             status = (
                 unified_planning.engines.results.PlanGenerationResultStatus.SOLVED_SATISFICING
@@ -725,7 +791,8 @@ class ROS2InterfaceReader(Converter):
     def _convert_log_message(
         self, log: msgs.LogMessage
     ) -> unified_planning.engines.LogMessage:
-        print("@handles(msgs.LogMessage)")
+        # print("@handles(msgs.LogMessage)")
+        # print(msg)
         if log.level == msgs.LogMessage.INFO:
             return unified_planning.engines.LogMessage(
                 level=unified_planning.engines.LogLevel.INFO,
@@ -749,50 +816,48 @@ class ROS2InterfaceReader(Converter):
         else:
             raise UPException(f'Unexpected Log Level: {log.level}')
 
-#     @handles(proto.CompilerResult)
-#     def _convert_compiler_result(
-#         self,
-#         result: proto.CompilerResult,
-#         lifted_problem: unified_planning.model.Problem,
-#     ) -> unified_planning.engines.CompilerResult:
-#         problem = self.convert(result.problem, lifted_problem.env)
-#         map: Dict[
-#             unified_planning.model.Action,
-#             Tuple[unified_planning.model.Action, List[unified_planning.model.FNode]],
-#         ] = {}
-#         for grounded_action in problem.actions:
-#             original_action_instance = self.convert(
-#                 result.map_back_plan[grounded_action.name], lifted_problem
-#             )
-#             map[grounded_action] = (
-#                 original_action_instance.action,
-#                 original_action_instance.actual_parameters,
-#             )
-#         return unified_planning.engines.CompilerResult(
-#             problem=problem,
-#             map_back_action_instance=partial(
-#                 unified_planning.engines.compilers.utils.lift_action_instance, map=map
-#             ),
-#             engine_name=result.engine.name,
-#             log_messages=[self.convert(log) for log in result.log_messages],
-#         )
-#
-#     @handles(proto.ValidationResult)
-#     def _convert_validation_result(
-#         self, result: proto.ValidationResult
-#     ) -> unified_planning.engines.ValidationResult:
-#         if result.status == proto.ValidationResult.ValidationResultStatus.Value(
-#             'VALID'
-#         ):
-#             r_status = unified_planning.engines.ValidationResultStatus.VALID
-#         elif result.status == proto.ValidationResult.ValidationResultStatus.Value(
-#             'INVALID'
-#         ):
-#             r_status = unified_planning.engines.ValidationResultStatus.INVALID
-#         else:
-#             raise UPException(f'Unexpected ValidationResult status: {result.status}')
-#         return unified_planning.engines.ValidationResult(
-#             status=r_status,
-#             engine_name=result.engine.name,
-#             log_messages=[self.convert(log) for log in result.log_messages],
-#         )
+    @handles(msgs.CompilerResult)
+    def _convert_compiler_result(
+        self,
+        result: msgs.CompilerResult,
+        lifted_problem: unified_planning.model.Problem,
+    ) -> unified_planning.engines.CompilerResult:
+        problem = self.convert(result.problem, lifted_problem.env)
+        map: Dict[
+            unified_planning.model.Action,
+            Tuple[unified_planning.model.Action, List[unified_planning.model.FNode]],
+        ] = {}
+        for grounded_action in problem.actions:
+            map_back_plan = dict(zip(
+                    result.map_back_plan_keys, rresult.map_back_plan_keys_values))
+            original_action_instance = self.convert(
+                map_back_plan[grounded_action.name], lifted_problem
+            )
+            map[grounded_action] = (
+                original_action_instance.action,
+                original_action_instance.actual_parameters,
+            )
+        return unified_planning.engines.CompilerResult(
+            problem=problem,
+            map_back_action_instance=partial(
+                unified_planning.engines.compilers.utils.lift_action_instance, map=map
+            ),
+            engine_name=result.engine,
+            log_messages=[self.convert(log) for log in result.log_messages],
+        )
+
+    @handles(msgs.ValidationResult)
+    def _convert_validation_result(
+        self, result: msgs.ValidationResult
+    ) -> unified_planning.engines.ValidationResult:
+        if result.status == msgs.ValidationResult.VALID:
+            r_status = unified_planning.engines.ValidationResultStatus.VALID
+        elif result.status == msgs.ValidationResult.INVALID:
+            r_status = unified_planning.engines.ValidationResultStatus.INVALID
+        else:
+            raise UPException(f'Unexpected ValidationResult status: {result.status}')
+        return unified_planning.engines.ValidationResult(
+            status=r_status,
+            engine_name=result.engine,
+            log_messages=[self.convert(log) for log in result.log_messages],
+        )
