@@ -20,29 +20,94 @@ from rclpy.action import ActionServer
 from rclpy.node import Node
 
 from unified_planning.io.pddl_reader import PDDLReader
-import unified_planning.model
+from unified_planning import model
+from unified_planning.shortcuts import OneshotPlanner
 
+from upf4ros2.ros2_interface_reader import ROS2InterfaceReader
 from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
 
-from upf_msgs.action import PDDLPlanOneShot
-from upf_msgs.msg import PDDLPlanRequest
-
+from upf_msgs.action import (
+    PDDLPlanOneShot,
+    PlanOneShot
+)
+from upf_msgs.srv import (
+    AddAction,
+    AddFluent,
+    AddGoal,
+    AddObject,
+    NewProblem,
+    SetInitialValue,
+    SetProblem
+)
+from upf_msgs.msg import (
+    PDDLPlanRequest,
+    PlanRequest
+)
 
 class UPF4ROS2Node(Node):
 
     def __init__(self):
         super().__init__('upf4ros2')
 
+        self.problems = {}
+
         self._ros2_interface_writer = ROS2InterfaceWriter()
+        self._ros2_interface_reader = ROS2InterfaceReader()
         self._pddl_plan_one_shot_server = ActionServer(
             self,
             PDDLPlanOneShot,
             'upf4ros2/planOneShotPDDL',
             self.pddl_plan_one_shot_callback)
 
-    def pddl_plan_one_shot_callback(self, goal_handle):
-        self.get_logger().info('Executing goal...')
+        self._plan_one_shot_server = ActionServer(
+            self,
+            PlanOneShot,
+            'upf4ros2/planOneShot',
+            self.plan_one_shot_callback)
 
+        self._new_problem = self.create_service(
+            NewProblem, 'upf4ros2/new_problem', self.new_problem)
+        self._set_problem = self.create_service(
+            SetProblem, 'upf4ros2/set_problem', self.set_problem)
+        self._add_fluent = self.create_service(
+            AddFluent, 'upf4ros2/add_fluent', self.add_fluent)
+        self._add_action = self.create_service(
+            AddAction, 'upf4ros2/add_action', self.add_action)
+        self._add_object = self.create_service(
+            AddObject, 'upf4ros2/add_object', self.add_object)
+        self._set_initial_value = self.create_service(
+            SetInitialValue, 'upf4ros2/set_initial_value', self.set_initial_value)
+        self._add_goal = self.create_service(
+            AddGoal, 'upf4ros2/add_goal', self.add_goal)
+
+    def new_problem(self, request, response):
+        if request.problem_name in self.problems:
+            response.success = False
+            response.message = f'Problem {request.problem_name} already exists'
+        else:
+            self.problems[request.problem_name] = model.Problem(request.problem_name)
+            response.success = True
+        return response
+
+    def set_problem(self, request, response):
+        return response
+
+    def add_fluent(self, request, response):
+        return response
+
+    def add_action(self, request, response):
+        return response
+
+    def add_object(self, request, response):
+        return response
+
+    def set_initial_value(self, request, response):
+        return response
+
+    def add_goal(self, request, response):
+        return response
+
+    def pddl_plan_one_shot_callback(self, goal_handle):
         domain_file = ''
         problem_file = ''
 
@@ -61,7 +126,7 @@ class UPF4ROS2Node(Node):
         reader = PDDLReader()
         upf_problem = reader.parse_problem(domain_file, problem_file)
 
-        with unified_planning.shortcuts.OneshotPlanner(problem_kind=upf_problem.kind) as planner:
+        with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
             result = planner.solve(upf_problem)
             print('%s returned: %s' % (planner.name, result.plan))
 
@@ -76,6 +141,24 @@ class UPF4ROS2Node(Node):
             result.message = ''
             return result
 
+    def plan_one_shot_callback(self, goal_handle):
+        upf_problem = self._ros2_interface_reader.convert(goal_handle.request.plan_request.problem)
+
+
+        with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
+            result = planner.solve(upf_problem)
+            print('%s returned: %s' % (planner.name, result.plan))
+
+            feedback_msg = PlanOneShot.Feedback()
+            feedback_msg.plan_result = self._ros2_interface_writer.convert(result)
+
+            goal_handle.publish_feedback(feedback_msg)
+            goal_handle.succeed()
+
+            result = PlanOneShot.Result()
+            result.success = True
+            result.message = ''
+            return result
 
 def main(args=None):
     rclpy.init(args=args)

@@ -22,6 +22,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/TypeDeclaration.msg"
   "msg/Action.msg"
   "msg/PlanRequest.msg"
+  "msg/PlanRequestRemote.msg"
   "msg/Hierarchy.msg"
   "msg/LogMessage.msg"
   "msg/ExpressionItem.msg"
@@ -44,7 +45,16 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Timing.msg"
   "msg/Parameter.msg"
   "msg/Metric.msg"
+  "srv/NewProblem.srv"
+  "srv/SetProblem.srv"
+  "srv/AddFluent.srv"
+  "srv/AddAction.srv"
+  "srv/AddObject.srv"
+  "srv/SetInitialValue.srv"
+  "srv/AddGoal.srv"
   "action/PDDLPlanOneShot.action"
+  "action/PlanOneShot.action"
+  "action/PlanOneShotRemote.action"
   DEPENDENCIES builtin_interfaces
 )
 
