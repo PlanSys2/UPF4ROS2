@@ -37,7 +37,7 @@ class UPF4ROS2Node(Node):
         self._pddl_plan_one_shot_server = ActionServer(
             self,
             PDDLPlanOneShot,
-            'upf4ros2/planOneShot',
+            'upf4ros2/planOneShotPDDL',
             self.pddl_plan_one_shot_callback)
 
     def pddl_plan_one_shot_callback(self, goal_handle):

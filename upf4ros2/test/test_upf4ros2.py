@@ -71,7 +71,7 @@ class TestUPF4ROS2(unittest.TestCase):
             goal_msg.plan_request.domain,
             goal_msg.plan_request.problem)
 
-        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShot')
+        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShotPDDL')
 
         def goal_response_callback(future):
             goal_handle = future.result()
@@ -134,7 +134,7 @@ class TestUPF4ROS2(unittest.TestCase):
             goal_msg.plan_request.domain,
             goal_msg.plan_request.problem)
 
-        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShot')
+        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShotPDDL')
 
         def goal_response_callback(future):
             goal_handle = future.result()
