@@ -1,5 +1,6 @@
 string problem_name
-upf_msgs/Assignment initial_value
+upf_msgs/Expression expression
+upf_msgs/Expression value
 ---
 bool success
 string message

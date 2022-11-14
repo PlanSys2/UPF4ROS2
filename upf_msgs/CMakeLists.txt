@@ -45,6 +45,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/Timing.msg"
   "msg/Parameter.msg"
   "msg/Metric.msg"
+  "srv/GetProblem.srv"
   "srv/NewProblem.srv"
   "srv/SetProblem.srv"
   "srv/AddFluent.srv"
