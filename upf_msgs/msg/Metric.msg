@@ -33,7 +33,8 @@ Expression expression
 # This is very awkward to do in this setting where the expression is detached from its scope.
 string[] action_cost_names
 upf_msgs/Expression[] action_cost_expr
-upf_msgs/Expression[] default_action_cost
+
+upf_msgs/Expression[<=1] default_action_cost
 
 # List of goals used to define the oversubscription planning problem.
 # Empty, if the `kind` is not OVERSUBSCRIPTION

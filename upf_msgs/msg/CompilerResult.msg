@@ -4,8 +4,8 @@
 upf_msgs/Problem problem
 # The map_back_plan field is a map from the ActionInstance of the
 # compiled problem to the original ActionInstance.
-string map_back_plan_keys
-upf_msgs/ActionInstance map_back_plan_values
+string[] map_back_plan_keys
+upf_msgs/ActionInstance[] map_back_plan_values
 
 # Optional. Information given by the engine to the user.
 upf_msgs/LogMessage[] log_messages

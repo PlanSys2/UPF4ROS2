@@ -3,6 +3,6 @@
 ## opened on left and right side respectively.
 
 bool is_left_open
-upf_msgs/Timing lower
+upf_msgs/Expression lower
 bool is_right_open
-upf_msgs/Timing upper
+upf_msgs/Expression upper

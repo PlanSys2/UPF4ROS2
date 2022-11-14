@@ -1,13 +1,13 @@
 # Copyright 2022 Intelligent Robotics Lab
 #
-# Licensed under the Apache License, Version 2.0 (the "License");
+# Licensed under the Apache License, Version 2.0 (the 'License');
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
+# distributed under the License is distributed on an 'AS IS' BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
@@ -18,14 +18,13 @@
 
 # type: ignore[valid-type]
 import fractions
-# from itertools import product
-from typing import List
+from itertools import product
+from typing import Dict, List
 
 from unified_planning import model
 from unified_planning.engines import PlanGenerationResult
 from unified_planning.exceptions import UPException
 import unified_planning.model.htn
-# from unified_planning.model.types import domain_size, domain_item
 from unified_planning.model.operators import (
     BOOL_OPERATORS,
     IRA_OPERATORS,
@@ -33,8 +32,10 @@ from unified_planning.model.operators import (
     RELATIONS,
 )
 from unified_planning.model.timing import TimepointKind
+from unified_planning.model.types import domain_item, domain_size
 import unified_planning.model.walkers as walkers
 from upf4ros2.converter import Converter, handles
+# from upf4ros2.ros2_utils import print_expr
 
 from upf_msgs import msg as msgs
 
@@ -117,7 +118,6 @@ class FNode2ROS2(walkers.DagWalker):
         ret.level.append(0)
         return ret
 
-
     def walk_real_constant(
         self, expression: model.FNode, args: List[msgs.Expression]
     ) -> msgs.Expression:
@@ -160,7 +160,7 @@ class FNode2ROS2(walkers.DagWalker):
         ret.expressions.append(item)
         ret.level.append(0)
         return ret
- 
+
     def walk_object_exp(
         self, expression: model.FNode, args: List[msgs.Expression]
     ) -> msgs.Expression:
@@ -184,7 +184,7 @@ class FNode2ROS2(walkers.DagWalker):
             atom = msgs.Atom()
             atom.symbol_atom.append(timing.timepoint.container)
             item.atom.append(atom)
-            item.type='up:container'
+            item.type = 'up:container'
             item.kind = msgs.ExpressionItem.CONTAINER_ID
             expr = msgs.Expression()
             expr.expressions.append(item)
@@ -192,6 +192,7 @@ class FNode2ROS2(walkers.DagWalker):
             args = [expr]
         else:
             args = []
+
         if tp.kind == TimepointKind.GLOBAL_START:
             fn = 'up:global_start'
         elif tp.kind == TimepointKind.GLOBAL_END:
@@ -210,19 +211,16 @@ class FNode2ROS2(walkers.DagWalker):
         fn_exp_item.kind = msgs.ExpressionItem.FUNCTION_SYMBOL
 
         tp_exp = msgs.Expression()
-        tp_exp_item = msgs.ExpressionItem()
-        tp_atom = msgs.Atom()
-        tp_atom.symbol_atom.append(fn)
-        tp_exp_item.atom.append(fn_atom)
-        tp_exp_item.kind = msgs.ExpressionItem.FUNCTION_APPLICATION
-        tp_exp_item.type = 'up:time'
-        tp_exp.expressions.append(item)
+        tp_exp.expressions.append(msgs.ExpressionItem())
         tp_exp.level.append(0)
-        
+
+        tp_exp.expressions[0].kind = msgs.ExpressionItem.FUNCTION_APPLICATION
+        tp_exp.expressions[0].type = 'up:time'
+
         tp_exp.expressions.append(fn_exp_item)
         tp_exp.level.append(1)
 
-        (other_expr, other_levels) =  self.increase_level_expressions(args, 1)
+        (other_expr, other_levels) = self.increase_level_expressions(args, 1)
 
         tp_exp.expressions.extend(other_expr)
         tp_exp.level.extend(other_levels)
@@ -235,7 +233,7 @@ class FNode2ROS2(walkers.DagWalker):
     ) -> (List[msgs.ExpressionItem], List[int]):
         ret_expr = []
         ret_levels = []
-        
+
         for expr in expressions:
             ret_expr.extend(expr.expressions)
             for level in expr.level:
@@ -259,11 +257,12 @@ class FNode2ROS2(walkers.DagWalker):
         item.kind = msgs.ExpressionItem.FLUENT_SYMBOL
         ret.expressions.append(item)
         ret.level.append(1)
-        
-        (extended_expr, extended_levels) = self.increase_level_expressions(args, 2)
+
+        (extended_expr, extended_levels) = self.increase_level_expressions(args, 1)
 
         ret.expressions.extend(extended_expr)
         ret.level.extend(extended_levels)
+
         return ret
 
     @walkers.handles(BOOL_OPERATORS.union(IRA_OPERATORS).union(RELATIONS))
@@ -279,66 +278,74 @@ class FNode2ROS2(walkers.DagWalker):
         sub_list.append(expr_item)
         # forall/exists: add the declared variables from the payload to
         # the beginning of the parameter list.
+        other_expr = []
+        other_levels = []
         if expression.is_exists() or expression.is_forall():
             list_prev = [self._ros2_writer.convert(p) for p in expression.variables()]
-            (other_expr, other_levels) =  self.increase_level_expressions(list_prev, 1)
+            (other_expr, other_levels) = self.increase_level_expressions(list_prev, 1)
 
-
-        sub_list.extend(args)
+        (args_expr, args_level) = self.increase_level_expressions(args, 1)
 
         ret = msgs.Expression()
         ret.expressions.append(msgs.ExpressionItem())
         ret.level.append(0)
         ret.expressions[0].kind = msgs.ExpressionItem.FUNCTION_APPLICATION
-        
+        ret.expressions[0].type = ''
+
         ret.expressions.append(expr_item)
         ret.level.append(1)
 
         ret.expressions.extend(other_expr)
         ret.level.extend(other_levels)
 
+        ret.expressions.extend(args_expr)
+        ret.level.extend(args_level)
+
         return ret
 
+
 map_features = {
-    'ACTION_BASED' : msgs.Problem.ACTION_BASED,
-    'HIERARCHICAL' : msgs.Problem.HIERARCHICAL,
-    'SIMPLE_NUMERIC_PLANNING' : msgs.Problem.SIMPLE_NUMERIC_PLANNING,
-    'GENERAL_NUMERIC_PLANNING' : msgs.Problem.GENERAL_NUMERIC_PLANNING,
-    'CONTINUOUS_TIME' : msgs.Problem.CONTINUOUS_TIME,
-    'DISCRETE_TIME' : msgs.Problem.DISCRETE_TIME,
-    'INTERMEDIATE_CONDITIONS_AND_EFFECTS' : msgs.Problem.INTERMEDIATE_CONDITIONS_AND_EFFECTS,
-    'TIMED_EFFECT' : msgs.Problem.TIMED_EFFECT,
-    'TIMED_GOALS' : msgs.Problem.TIMED_GOALS,
-    'DURATION_INEQUALITIES' : msgs.Problem.DURATION_INEQUALITIES,
-    'STATIC_FLUENTS_IN_DURATION' : msgs.Problem.STATIC_FLUENTS_IN_DURATION,
-    'FLUENTS_IN_DURATION' : msgs.Problem.FLUENTS_IN_DURATION,
-    'CONTINUOUS_NUMBERS' : msgs.Problem.CONTINUOUS_NUMBERS,
-    'DISCRETE_NUMBERS' : msgs.Problem.DISCRETE_NUMBERS,
-    'NEGATIVE_CONDITIONS' : msgs.Problem.NEGATIVE_CONDITIONS,
-    'DISJUNCTIVE_CONDITIONS' : msgs.Problem.DISJUNCTIVE_CONDITIONS,
-    'EQUALITY' : msgs.Problem.EQUALITY,
-    'EXISTENTIAL_CONDITIONS' : msgs.Problem.EXISTENTIAL_CONDITIONS,
-    'UNIVERSAL_CONDITIONS' : msgs.Problem.UNIVERSAL_CONDITIONS,
-    'CONDITIONAL_EFFECTS' : msgs.Problem.CONDITIONAL_EFFECTS,
-    'INCREASE_EFFECTS' : msgs.Problem.INCREASE_EFFECTS,
-    'DECREASE_EFFECTS' : msgs.Problem.DECREASE_EFFECTS,
-    'FLAT_TYPING' : msgs.Problem.FLAT_TYPING,
-    'HIERARCHICAL_TYPING' : msgs.Problem.HIERARCHICAL_TYPING,
-    'NUMERIC_FLUENTS' : msgs.Problem.NUMERIC_FLUENTS,
-    'OBJECT_FLUENTS' : msgs.Problem.OBJECT_FLUENTS,
-    'ACTIONS_COST' : msgs.Problem.ACTIONS_COST,
-    'FINAL_VALUE' : msgs.Problem.FINAL_VALUE,
-    'MAKESPAN' : msgs.Problem.MAKESPAN,
-    'PLAN_LENGTH' : msgs.Problem.PLAN_LENGTH,
-    'OVERSUBSCRIPTION' : msgs.Problem.OVERSUBSCRIPTION,
-    'SIMULATED_EFFECTS' : msgs.Problem.SIMULATED_EFFECTS,
+    'ACTION_BASED': msgs.Problem.ACTION_BASED,
+    'HIERARCHICAL': msgs.Problem.HIERARCHICAL,
+    'SIMPLE_NUMERIC_PLANNING': msgs.Problem.SIMPLE_NUMERIC_PLANNING,
+    'GENERAL_NUMERIC_PLANNING': msgs.Problem.GENERAL_NUMERIC_PLANNING,
+    'CONTINUOUS_TIME': msgs.Problem.CONTINUOUS_TIME,
+    'DISCRETE_TIME': msgs.Problem.DISCRETE_TIME,
+    'INTERMEDIATE_CONDITIONS_AND_EFFECTS': msgs.Problem.INTERMEDIATE_CONDITIONS_AND_EFFECTS,
+    'TIMED_EFFECT': msgs.Problem.TIMED_EFFECT,
+    'TIMED_GOALS': msgs.Problem.TIMED_GOALS,
+    'DURATION_INEQUALITIES': msgs.Problem.DURATION_INEQUALITIES,
+    'STATIC_FLUENTS_IN_DURATION': msgs.Problem.STATIC_FLUENTS_IN_DURATION,
+    'FLUENTS_IN_DURATION': msgs.Problem.FLUENTS_IN_DURATION,
+    'CONTINUOUS_NUMBERS': msgs.Problem.CONTINUOUS_NUMBERS,
+    'DISCRETE_NUMBERS': msgs.Problem.DISCRETE_NUMBERS,
+    'NEGATIVE_CONDITIONS': msgs.Problem.NEGATIVE_CONDITIONS,
+    'DISJUNCTIVE_CONDITIONS': msgs.Problem.DISJUNCTIVE_CONDITIONS,
+    'EQUALITY': msgs.Problem.EQUALITY,
+    'EXISTENTIAL_CONDITIONS': msgs.Problem.EXISTENTIAL_CONDITIONS,
+    'UNIVERSAL_CONDITIONS': msgs.Problem.UNIVERSAL_CONDITIONS,
+    'CONDITIONAL_EFFECTS': msgs.Problem.CONDITIONAL_EFFECTS,
+    'INCREASE_EFFECTS': msgs.Problem.INCREASE_EFFECTS,
+    'DECREASE_EFFECTS': msgs.Problem.DECREASE_EFFECTS,
+    'FLAT_TYPING': msgs.Problem.FLAT_TYPING,
+    'HIERARCHICAL_TYPING': msgs.Problem.HIERARCHICAL_TYPING,
+    'NUMERIC_FLUENTS': msgs.Problem.NUMERIC_FLUENTS,
+    'OBJECT_FLUENTS': msgs.Problem.OBJECT_FLUENTS,
+    'ACTIONS_COST': msgs.Problem.ACTIONS_COST,
+    'FINAL_VALUE': msgs.Problem.FINAL_VALUE,
+    'MAKESPAN': msgs.Problem.MAKESPAN,
+    'PLAN_LENGTH': msgs.Problem.PLAN_LENGTH,
+    'OVERSUBSCRIPTION': msgs.Problem.OVERSUBSCRIPTION,
+    'SIMULATED_EFFECTS': msgs.Problem.SIMULATED_EFFECTS,
 }
 
-def map_feature(feature: str) -> int:    
+
+def map_feature(feature: str) -> int:
     pb_feature = map_features[feature]
     if pb_feature is None:
         raise ValueError(f'Cannot convert feature to protobuf {feature}')
     return pb_feature
+
 
 class ROS2InterfaceWriter(Converter):
     """Class to convert from unified_planning Problem instance to ROS 2 Interfaces."""
@@ -360,10 +367,6 @@ class ROS2InterfaceWriter(Converter):
         ret.parameters = sig
         if fluent in problem.fluents_defaults:
             ret.default_value.append(self.convert(problem.fluents_defaults[fluent]))
-            # print("************************************************************************")
-            # print(fluent)
-            # print(ret)
-            # print("************************************************************************")
         return ret
 
     @handles(model.Object)
@@ -418,14 +421,7 @@ class ROS2InterfaceWriter(Converter):
         ret.kind = kind
 
         ret.fluent = self.convert(effect.fluent)
-        # print("=========================================================================================")
-        # print(effect.value)
-        # print(type(effect.value))
-
         ret.value = self.convert(effect.value)
-        # print(ret.value)
-        # print(type(ret.value))
-        # print("=========================================================================================")
         ret.condition = self.convert(effect.condition)
         return ret
 
@@ -438,7 +434,7 @@ class ROS2InterfaceWriter(Converter):
 
         for cond in a.preconditions:
             r2cond = msgs.Condition()
-            r2cond.cond = cond=self.convert(cond)
+            r2cond.cond = self.convert(cond)
             conditions.append(r2cond)
 
         for eff in a.effects:
@@ -450,11 +446,7 @@ class ROS2InterfaceWriter(Converter):
         ret.name = a.name
         ret.parameters = [self.convert(p) for p in a.parameters]
         ret.conditions = conditions
-
-        # print("*****************************************************************")
         ret.effects = effects
-        # print(ret.effects)
-        # print("*****************************************************************")
 
         return ret
 
@@ -468,7 +460,7 @@ class ROS2InterfaceWriter(Converter):
             for c in cond:
                 new_cond = msgs.Condition()
                 new_cond.cond = self.convert(c)
-                new_cond.span = span
+                new_cond.span.append(span)
 
                 conditions.append(new_cond)
         for ot, eff in a.effects.items():
@@ -476,15 +468,15 @@ class ROS2InterfaceWriter(Converter):
             for e in eff:
                 new_eff = msgs.Effect()
                 new_eff.effect = self.convert(e)
-                new_eff.occurrence_time = ot
+                new_eff.occurrence_time.append(ot)
 
                 effects.append(new_eff)
-        ret = Action()
-        ret.name=a.name
-        ret.parameters=[self.convert(p) for p in a.parameters]
-        ret.duration=self.convert(a.duration)
-        ret.conditions=conditions
-        ret.effects=effects
+        ret = msgs.Action()
+        ret.name = a.name
+        ret.parameters = [self.convert(p) for p in a.parameters]
+        ret.duration.append(self.convert(a.duration))
+        ret.conditions = conditions
+        ret.effects = effects
 
         return ret
 
@@ -501,14 +493,16 @@ class ROS2InterfaceWriter(Converter):
 
         ret = msgs.Timepoint()
         ret.kind = kind
-        ret.container_id = tp.container
+
+        if tp.container is not None:
+            ret.container_id = tp.container
         return ret
 
     @handles(model.Timing)
     def _convert_timing(self, timing: model.Timing) -> msgs.Timing:
         ret = msgs.Timing()
         ret.timepoint = self.convert(timing._timepoint)
-        ret.delay = self.convert(fractions.Fraction(timing.delay))
+        ret.delay.append(self.convert(fractions.Fraction(timing.delay)))
         return ret
 
     @handles(fractions.Fraction)
@@ -542,8 +536,8 @@ class ROS2InterfaceWriter(Converter):
     @handles(model.DurationInterval)
     def _convert_duration_interval(
         self, interval: model.DurationInterval
-    ) -> msgs.Interval:
-        ret = msgs.Interval()
+    ) -> msgs.Duration:
+        ret = msgs.Duration()
         ret.controllable_in_bounds.is_left_open = interval.is_left_open()
         ret.controllable_in_bounds.lower = self.convert(interval.lower)
         ret.controllable_in_bounds.is_right_open = interval.is_right_open()
@@ -556,8 +550,8 @@ class ROS2InterfaceWriter(Converter):
         self, task: model.htn.Task
     ) -> msgs.AbstractTaskDeclaration:
         ret = msgs.AbstractTaskDeclaration()
-        ret.name=task.name
-        ret.parameters=[self.convert(p) for p in task.parameters]
+        ret.name = task.name
+        ret.parameters = [self.convert(p) for p in task.parameters]
         return ret
 
     @handles(model.htn.ParameterizedTask)
@@ -566,12 +560,15 @@ class ROS2InterfaceWriter(Converter):
     ) -> msgs.Task:
         parameters = []
         for p in task.parameters:
-            aux = Expression()
-            aux.atom.symbol = p.name
-            aux.list = []
-            aux.kind = ExpressionKind.PARAMETER
+            expr = msgs.Expression()
+            aux = msgs.ExpressionItem()
+            aux.atom.append(msgs.Atom())
+            aux.atom[0].symbol_atom.append(p.name)
+            aux.kind = msgs.ExpressionItem.PARAMETER
             aux.type = interface_type(p.type)
-            parameters.append(aux)
+            expr.expressions.append(aux)
+            expr.level.append(0)
+            parameters.append(expr)
 
         ret = msgs.Task()
         ret.id = ''
@@ -614,9 +611,9 @@ class ROS2InterfaceWriter(Converter):
         self, problem: model.htn.HierarchicalProblem
     ) -> msgs.Hierarchy:
         ret = msgs.Hierarchy()
-        ret.initial_task_network=self.convert(problem.task_network)
-        ret.abstract_tasks=[self.convert(t) for t in problem.tasks]
-        ret.methods=[self.convert(m) for m in problem.methods]
+        ret.initial_task_network = self.convert(problem.task_network)
+        ret.abstract_tasks = [self.convert(t) for t in problem.tasks]
+        ret.methods = [self.convert(m) for m in problem.methods]
         return ret
 
     @handles(model.Problem, model.htn.HierarchicalProblem)
@@ -641,14 +638,14 @@ class ROS2InterfaceWriter(Converter):
         ret.fluents = [self.convert(f, problem) for f in problem.fluents]
         ret.objects = [self.convert(o) for o in problem.all_objects]
         ret.actions = [self.convert(a) for a in problem.actions]
-        
+
         for (x, v) in problem.initial_values.items():
             assignment = msgs.Assignment()
             assignment.fluent = self.convert(x)
             assignment.value = self.convert(v)
             ret.initial_state.append(assignment)
 
-        ret.timed_effects=[self.convert(e) for e in problem.timed_effects]
+        ret.timed_effects = [self.convert(e) for e in problem.timed_effects]
         ret.goals = goals
         ret.features = [map_feature(feature) for feature in problem.kind.features]
         ret.metrics = [self.convert(m) for m in problem.quality_metrics]
@@ -665,10 +662,10 @@ class ROS2InterfaceWriter(Converter):
 
         ret = msgs.Metric()
         ret.kind = msgs.Metric.MINIMIZE_ACTION_COSTS
-        ret.action_cost_names = action_costs.action_costs.keys()
-        ret.action_cost_expr = action_costs.action_costs.values()
+        ret.action_cost_names = action_costs.keys()
+        ret.action_cost_expr = list(action_costs.values())
         if metric.default is not None:
-            ret.default_action_cost = self.convert(metric.default)
+            ret.default_action_cost.append(self.convert(metric.default))
         return ret
 
     @handles(model.metrics.MinimizeSequentialPlanLength)
@@ -708,13 +705,13 @@ class ROS2InterfaceWriter(Converter):
         goals = []
         for g, c in metric.goals.items():
             goal = msgs.GoalWithCost()
-            goal.goal=self.convert(g)
-            goal.cost=self.convert(fractions.Fraction(c))
+            goal.goal = self.convert(g)
+            goal.cost = self.convert(fractions.Fraction(c))
             goals.append(goal)
         ret = msgs.Metric()
         ret.kind = msgs.Metric.OVERSUBSCRIPTION
         ret.goals = goals
-        return ret      
+        return ret
 
     @handles(model.Parameter)
     def _convert_action_parameter(self, p: model.Parameter) -> msgs.Parameter:
@@ -856,7 +853,7 @@ class ROS2InterfaceWriter(Converter):
         if log.level == unified_planning.engines.LogLevel.INFO:
             level = msgs.LogMessage.INFO
         elif log.level == unified_planning.engines.LogLevel.WARNING:
-            level = msgs.LogLevel.WARNING
+            level = msgs.LogMessage.WARNING
         elif log.level == unified_planning.engines.LogLevel.ERROR:
             level = msgs.LogMessage.ERROR
         elif log.level == unified_planning.engines.LogLevel.DEBUG:
@@ -873,7 +870,7 @@ class ROS2InterfaceWriter(Converter):
     def _convert_compiler_result(
         self, result: unified_planning.engines.CompilerResult
     ) -> msgs.CompilerResult:
-        map: Dict[str, proto.ActionInstance] = {}
+        mymap: Dict[str, msgs.ActionInstance] = {}
         log_messages = result.log_messages
         if log_messages is None:
             log_messages = []
@@ -882,7 +879,7 @@ class ROS2InterfaceWriter(Converter):
                 type_list = [param.type for param in compiled_action.parameters]
                 if len(type_list) == 0:
                     ai = unified_planning.plans.ActionInstance(compiled_action)
-                    map[str(ai)] = self.convert(result.map_back_action_instance(ai))
+                    mymap[str(ai)] = self.convert(result.map_back_action_instance(ai))
                     continue
                 ground_size = 1
                 domain_sizes = []
@@ -890,22 +887,22 @@ class ROS2InterfaceWriter(Converter):
                     ds = domain_size(result.problem, t)
                     domain_sizes.append(ds)
                     ground_size *= ds
-                items_list: List[List[FNode]] = []
-                for size, type in zip(domain_sizes, type_list):
+                items_list: List[List[model.FNode]] = []
+                for size, mtype in zip(domain_sizes, type_list):
                     items_list.append(
-                        [domain_item(result.problem, type, j) for j in range(size)]
+                        [domain_item(result.problem, mtype, j) for j in range(size)]
                     )
                 grounded_params_list = product(*items_list)
                 for grounded_params in grounded_params_list:
                     ai = unified_planning.plans.ActionInstance(
                         compiled_action, tuple(grounded_params)
                     )
-                    map[str(ai)] = self.convert(result.map_back_action_instance(ai))
+                    mymap[str(ai)] = self.convert(result.map_back_action_instance(ai))
         ret = msgs.CompilerResult()
         ret.problem = self.convert(result.problem)
-        ret.map_back_plan_keys = map.keys()
-        ret.map_back_plan_values = map.values()
-        ret.log_messages=[self.convert(log) for log in log_messages]
+        ret.map_back_plan_keys = mymap.keys()
+        ret.map_back_plan_values = list(mymap.values())
+        ret.log_messages = [self.convert(log) for log in log_messages]
         ret.engine = result.engine_name
         return ret
 
@@ -924,8 +921,8 @@ class ROS2InterfaceWriter(Converter):
         self, status: unified_planning.engines.ValidationResultStatus
     ) -> int:
         if status == unified_planning.engines.ValidationResultStatus.VALID:
-            return msg.ValidationResult.VALID
+            return msgs.ValidationResult.VALID
         elif status == unified_planning.engines.ValidationResultStatus.INVALID:
-            return msg.ValidationResult.INVALID
+            return msgs.ValidationResult.INVALID
         else:
             raise UPException(f'Unknown result status: {status}')
