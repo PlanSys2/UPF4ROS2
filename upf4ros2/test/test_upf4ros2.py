@@ -120,7 +120,11 @@ class TestUPF4ROS2(unittest.TestCase):
 
             node_cli.get_logger().info('Result: success: {0} message:{1}'.
                                        format(result.success, result.message))
+            node_cli.destroy_node()
+            node_test.destroy_node()
+            executor.shutdown()
             rclpy.shutdown()
+            executor_thread.join()
 
         def feedback_callback(feedback_msg):
             feedback = feedback_msg.feedback
@@ -137,6 +141,10 @@ class TestUPF4ROS2(unittest.TestCase):
         send_goal_future = client.send_goal_async(goal_msg, feedback_callback=feedback_callback)
         send_goal_future.add_done_callback(goal_response_callback)
 
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
+        rclpy.shutdown()
         executor_thread.join()
 
     def test_plan_from_file_pddl_tt(self):
@@ -200,6 +208,10 @@ class TestUPF4ROS2(unittest.TestCase):
         send_goal_future = client.send_goal_async(goal_msg, feedback_callback=feedback_callback)
         send_goal_future.add_done_callback(goal_response_callback)
 
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
+        rclpy.shutdown()
         executor_thread.join()
 
     def test_plan_robot(self):
@@ -259,6 +271,10 @@ class TestUPF4ROS2(unittest.TestCase):
         send_goal_future = client.send_goal_async(goal_msg, feedback_callback=feedback_callback)
         send_goal_future.add_done_callback(goal_response_callback)
 
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
+        rclpy.shutdown()
         executor_thread.join()
 
     def test_new_problem(self):
@@ -289,6 +305,9 @@ class TestUPF4ROS2(unittest.TestCase):
         self.assertFalse(response.success)
         self.assertEqual(response.message, 'Problem problem_test_1 already exists')
 
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
         rclpy.shutdown()
         executor_thread.join()
 
@@ -343,6 +362,10 @@ class TestUPF4ROS2(unittest.TestCase):
         problem_ret = pb_reader.convert(response2.problem)
         
         self.assertEqual(problem, problem_ret)
+
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
         rclpy.shutdown()
         executor_thread.join()
 
@@ -448,6 +471,10 @@ class TestUPF4ROS2(unittest.TestCase):
         problem_ret = pb_reader.convert(response2.problem)
         
         self.assertEqual(problem, problem_ret)
+
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
         rclpy.shutdown()
         executor_thread.join()
 
@@ -519,6 +546,9 @@ class TestUPF4ROS2(unittest.TestCase):
         problem_ret = pb_reader.convert(response2.problem)
         
         # self.assertEqual(problem, problem_ret)
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
         rclpy.shutdown()
         executor_thread.join()
 
@@ -584,6 +614,9 @@ class TestUPF4ROS2(unittest.TestCase):
 #        problem_ret = pb_reader.convert(response2.problem)
         
         # self.assertEqual(problem, problem_ret)
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
         rclpy.shutdown()
         executor_thread.join()
 
