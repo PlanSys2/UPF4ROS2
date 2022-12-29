@@ -39,9 +39,15 @@ jobs:
           python3 -m mypy unified_planning
           python3 scripts/test_imports.py
           cd ..
-          git clone -b ${{env.up_tamer_commit}} https://github.com/aiplan4eu/up-tamer
+          git clone https://github.com/aiplan4eu/up-tamer
+          cd up-tamer
+          git checkout ${{env.up_tamer_commit}}
+          cd .. 
           python3 -m pip install up-tamer/
-          git clone -b ac2b04d2${{env.up_pyperplan_commit}} https://github.com/aiplan4eu/up-pyperplan
+          git clone https://github.com/aiplan4eu/up-pyperplan
+          cd up-pyperplan
+          git checkout ${{env.up_pyperplan_commit}}
+          cd ..
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
 
