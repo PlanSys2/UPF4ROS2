@@ -1,7 +1,5 @@
 # UPF4ROS2
-<!---[![GitHub Action
-Status](https://github.com/PlanSys2/UPF4ROS2/workflows/main/badge.svg)](https://github.com/PlanSys2/UPF4ROS2)
--->
+[![main](https://github.com/PlanSys2/UPF4ROS2/actions/workflows/main.yaml/badge.svg)](https://github.com/PlanSys2/UPF4ROS2/actions/workflows/main.yaml)
 
 This repository contains a UPF TSB for ROS 2
 
