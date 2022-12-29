@@ -19,8 +19,8 @@ import rclpy
 from rclpy.action import ActionServer
 from rclpy.node import Node
 
-from unified_planning.io.pddl_reader import PDDLReader
 from unified_planning import model
+from unified_planning.io.pddl_reader import PDDLReader
 from unified_planning.shortcuts import OneshotPlanner
 
 from upf4ros2.ros2_interface_reader import ROS2InterfaceReader
@@ -30,6 +30,11 @@ from upf_msgs.action import (
     PDDLPlanOneShot,
     PlanOneShot
 )
+
+from upf_msgs.msg import (
+    PDDLPlanRequest
+)
+
 from upf_msgs.srv import (
     AddAction,
     AddFluent,
@@ -40,10 +45,7 @@ from upf_msgs.srv import (
     SetInitialValue,
     SetProblem
 )
-from upf_msgs.msg import (
-    PDDLPlanRequest,
-    PlanRequest
-)
+
 
 class UPF4ROS2Node(Node):
 
@@ -88,7 +90,8 @@ class UPF4ROS2Node(Node):
             response.success = False
             response.message = f'Problem {request.problem_name} does not exist'
         else:
-            response.problem = self._ros2_interface_writer.convert(self.problems[request.problem_name])
+            response.problem = self._ros2_interface_writer.convert(
+                self.problems[request.problem_name])
             response.success = True
         return response
 
@@ -97,7 +100,8 @@ class UPF4ROS2Node(Node):
             response.success = False
             response.message = f'Problem {request.problem_name} already exists'
         else:
-            self.problems[request.problem_name] = model.Problem(request.problem_name)
+            self.problems[request.problem_name] = model.Problem(
+                request.problem_name)
             response.success = True
         return response
 
@@ -106,7 +110,8 @@ class UPF4ROS2Node(Node):
             response.success = False
             response.message = f'Problem {request.problem_name} already exists'
         else:
-            self.problems[request.problem_name] = self._ros2_interface_reader.convert(request.problem)
+            self.problems[request.problem_name] = \
+                self._ros2_interface_reader.convert(request.problem)
             response.success = True
         return response
 
@@ -116,7 +121,7 @@ class UPF4ROS2Node(Node):
             response.message = f'Problem {request.problem_name} does not exist'
         else:
             problem = self.problems[request.problem_name]
-            
+
             fluent = self._ros2_interface_reader.convert(request.fluent, problem)
             value = self._ros2_interface_reader.convert(request.default_value, problem)
             problem.add_fluent(fluent, default_initial_value=value)
@@ -129,7 +134,7 @@ class UPF4ROS2Node(Node):
             response.message = f'Problem {request.problem_name} does not exist'
         else:
             problem = self.problems[request.problem_name]
-            
+
             action = self._ros2_interface_reader.convert(request.action, problem)
             problem.add_action(action)
             response.success = True
@@ -141,19 +146,20 @@ class UPF4ROS2Node(Node):
             response.message = f'Problem {request.problem_name} does not exist'
         else:
             problem = self.problems[request.problem_name]
-            
+
             action = self._ros2_interface_reader.convert(request.object, problem)
             problem.add_object(action)
             response.success = True
 
         return response
+
     def set_initial_value(self, request, response):
         if request.problem_name not in self.problems:
             response.success = False
             response.message = f'Problem {request.problem_name} does not exist'
         else:
             problem = self.problems[request.problem_name]
-            
+
             expression = self._ros2_interface_reader.convert(request.expression, problem)
             value = self._ros2_interface_reader.convert(request.value, problem)
             problem.set_initial_value(expression, value)
@@ -166,7 +172,7 @@ class UPF4ROS2Node(Node):
             response.message = f'Problem {request.problem_name} does not exist'
         else:
             problem = self.problems[request.problem_name]
-            
+
             if len(request.goal) > 0:
                 goal = self._ros2_interface_reader.convert(request.goal[0].goal, problem)
                 problem.add_goal(goal)
@@ -177,7 +183,7 @@ class UPF4ROS2Node(Node):
                 response.success = True
             else:
                 response.success = False
-                response.message = f'Goal is void'
+                response.message = 'Goal is void'
         return response
 
     def pddl_plan_one_shot_callback(self, goal_handle):
@@ -217,7 +223,6 @@ class UPF4ROS2Node(Node):
     def plan_one_shot_callback(self, goal_handle):
         upf_problem = self._ros2_interface_reader.convert(goal_handle.request.plan_request.problem)
 
-
         with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
             result = planner.solve(upf_problem)
             print('%s returned: %s' % (planner.name, result.plan))
@@ -232,6 +237,7 @@ class UPF4ROS2Node(Node):
             result.success = True
             result.message = ''
             return result
+
 
 def main(args=None):
     rclpy.init(args=args)

@@ -1,16 +1,18 @@
 # Copyright 2022 Intelligent Robotics Lab
 #
-# Licensed under the Apache License, Version 2.0 (the 'License');
+# Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
 # You may obtain a copy of the License at
 #
 #     http://www.apache.org/licenses/LICENSE-2.0
 #
 # Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an 'AS IS' BASIS,
+# distributed under the License is distributed on an "AS IS" BASIS,
 # WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 # See the License for the specific language governing permissions and
 # limitations under the License.
+#
+
 
 import threading
 import unittest
@@ -27,12 +29,13 @@ import rclpy.executors
 from unified_planning import model
 from unified_planning import shortcuts
 from unified_planning.io.pddl_reader import PDDLReader
-from upf4ros2 import upf4ros2_main
 from unified_planning.test.examples import get_example_problems
+from upf4ros2 import upf4ros2_main
 
 # from upf_msgs.srv import AddAction, AddProblem
 from upf4ros2.ros2_interface_reader import ROS2InterfaceReader  # type: ignore[attr-defined]
 from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter  # type: ignore[attr-defined]
+from upf_msgs import msg as msgs
 from upf_msgs.action import (
     PDDLPlanOneShot,
     PlanOneShot
@@ -48,18 +51,17 @@ from upf_msgs.srv import (
     SetProblem
 )
 
-from upf_msgs import msg as msgs
-
 
 def spin_srv(executor):
-     try:
-          executor.spin()
-     except rclpy.executors.ExternalShutdownException:
-          pass
+    try:
+        executor.spin()
+    except rclpy.executors.ExternalShutdownException:
+        pass
+
 
 def call_srv_manually(client_node):
-     client_node.call_srv()
-     client_node.get_logger().info('Test finished successfully.\n')
+    client_node.call_srv()
+    client_node.get_logger().info('Test finished successfully.\n')
 
 
 class TestUPF4ROS2(unittest.TestCase):
@@ -279,7 +281,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
     def test_new_problem(self):
         rclpy.init(args=None)
-        
+
         executor = rclpy.executors.SingleThreadedExecutor()
         node_test = upf4ros2_main.UPF4ROS2Node()
         node_cli = rclpy.create_node('test_new_problem')
@@ -294,7 +296,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         srv = NewProblem.Request()
         srv.problem_name = 'problem_test_1'
-        
+
         response = client.call(srv)
         self.assertTrue(response.success)
         self.assertEqual(response.message, '')
@@ -333,7 +335,7 @@ class TestUPF4ROS2(unittest.TestCase):
         srv = SetProblem.Request()
         srv.problem_name = 'problem_test_robot'
         srv.problem = pb_writer.convert(problem)
-        
+
         response = client.call(srv)
         self.assertTrue(response.success)
         self.assertEqual(response.message, '')
@@ -345,7 +347,6 @@ class TestUPF4ROS2(unittest.TestCase):
         response = client.call(srv)
         self.assertFalse(response.success)
         self.assertEqual(response.message, 'Problem problem_test_robot already exists')
-
 
         client2 = node_cli.create_client(GetProblem, 'upf4ros2/get_problem')
         while not client.wait_for_service(timeout_sec=1.0):
@@ -360,7 +361,7 @@ class TestUPF4ROS2(unittest.TestCase):
         self.assertTrue(response2.success)
 
         problem_ret = pb_reader.convert(response2.problem)
-        
+
         self.assertEqual(problem, problem_ret)
 
         node_cli.destroy_node()
@@ -391,7 +392,7 @@ class TestUPF4ROS2(unittest.TestCase):
         srv = SetProblem.Request()
         srv.problem_name = 'problem_test_robot'
         srv.problem = pb_writer.convert(problem)
-        
+
         response = client.call(srv)
         self.assertTrue(response.success)
         self.assertEqual(response.message, '')
@@ -399,7 +400,7 @@ class TestUPF4ROS2(unittest.TestCase):
         # Make changes in local and request in global, and check for diffs
 
         add_fluent_cli = node_cli.create_client(AddFluent, 'upf4ros2/add_fluent')
-        
+
         Location = shortcuts.UserType('Location')
         robot_at = model.Fluent(
             'robot_at_bis', shortcuts.BoolType(),
@@ -426,8 +427,8 @@ class TestUPF4ROS2(unittest.TestCase):
 
         problem.add_fluent(robot_at, default_initial_value=False)
 
-
-        set_initial_value_cli = node_cli.create_client(SetInitialValue, 'upf4ros2/set_initial_value')
+        set_initial_value_cli = node_cli.create_client(
+            SetInitialValue, 'upf4ros2/set_initial_value')
         set_initial_value_srv = SetInitialValue.Request()
         set_initial_value_srv.problem_name = 'problem_test_robot'
         l2 = model.Object('l2', Location)
@@ -439,7 +440,6 @@ class TestUPF4ROS2(unittest.TestCase):
         self.assertEqual(set_initial_value_response.message, '')
 
         problem.set_initial_value(robot_at(l2), False)
-
 
         add_goal_cli = node_cli.create_client(AddGoal, 'upf4ros2/add_goal')
         add_goal_srv = AddGoal.Request()
@@ -469,7 +469,7 @@ class TestUPF4ROS2(unittest.TestCase):
         self.assertTrue(response2.success)
 
         problem_ret = pb_reader.convert(response2.problem)
-        
+
         self.assertEqual(problem, problem_ret)
 
         node_cli.destroy_node()
@@ -500,7 +500,7 @@ class TestUPF4ROS2(unittest.TestCase):
         srv = SetProblem.Request()
         srv.problem_name = 'problem_test_robot'
         srv.problem = pb_writer.convert(problem)
-        
+
         response = client.call(srv)
         self.assertTrue(response.success)
         self.assertEqual(response.message, '')
@@ -508,10 +508,10 @@ class TestUPF4ROS2(unittest.TestCase):
         # Make changes in local and request in global, and check for diffs
 
         add_action_cli = node_cli.create_client(AddAction, 'upf4ros2/add_action')
-        
+
         Location = shortcuts.UserType('Location')
         robot_at = model.Fluent('robot_at', shortcuts.BoolType(), l=Location)
-    
+
         move = model.InstantaneousAction('move2', l_from=Location, l_to=Location)
         l_from = move.parameter('l_from')
         l_to = move.parameter('l_to')
@@ -535,7 +535,7 @@ class TestUPF4ROS2(unittest.TestCase):
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
-        pb_reader = ROS2InterfaceReader()
+        # pb_reader = ROS2InterfaceReader()
 
         srv2 = GetProblem.Request()
         srv2.problem_name = 'problem_test_robot'
@@ -543,9 +543,9 @@ class TestUPF4ROS2(unittest.TestCase):
         response2 = client2.call(srv2)
         self.assertTrue(response2.success)
 
-        problem_ret = pb_reader.convert(response2.problem)
-        
+        # problem_ret = pb_reader.convert(response2.problem)
         # self.assertEqual(problem, problem_ret)
+
         node_cli.destroy_node()
         node_test.destroy_node()
         executor.shutdown()
@@ -574,7 +574,7 @@ class TestUPF4ROS2(unittest.TestCase):
         srv = SetProblem.Request()
         srv.problem_name = 'problem_test_robot'
         srv.problem = pb_writer.convert(problem)
-        
+
         response = client.call(srv)
         self.assertTrue(response.success)
         self.assertEqual(response.message, '')
@@ -582,20 +582,20 @@ class TestUPF4ROS2(unittest.TestCase):
         # Make changes in local and request in global, and check for diffs
 
         add_object_cli = node_cli.create_client(AddObject, 'upf4ros2/add_object')
-        
+
         Location = shortcuts.UserType('Location')
 
-        object = model.Object('l3', Location)
+        upf_object = model.Object('l3', Location)
 
         add_object_srv = AddObject.Request()
         add_object_srv.problem_name = 'problem_test_robot'
-        add_object_srv.object = pb_writer.convert(object)
+        add_object_srv.object = pb_writer.convert(upf_object)
 
         add_object_response = add_object_cli.call(add_object_srv)
         self.assertTrue(add_object_response.success)
         self.assertEqual(add_object_response.message, '')
 
-        problem.add_object(object)
+        problem.add_object(upf_object)
 
         ###############################################################
 
@@ -612,13 +612,14 @@ class TestUPF4ROS2(unittest.TestCase):
 #        self.assertTrue(response2.success)
 #
 #        problem_ret = pb_reader.convert(response2.problem)
-        
+
         # self.assertEqual(problem, problem_ret)
         node_cli.destroy_node()
         node_test.destroy_node()
         executor.shutdown()
         rclpy.shutdown()
         executor_thread.join()
+
 
 if __name__ == '__main__':
     unittest.main()
