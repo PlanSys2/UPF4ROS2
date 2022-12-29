@@ -8,6 +8,11 @@ on:
     branches:
       - main
 
+env:
+  up_tamer_commit: "869e7ab06cf23c5541a47f46209159fd51d8021f"
+  up_pyperplan_commit: "ac2b04d2d41c20b15f7c4143c19947f9704d1888"
+  up_fast_downward_commit: "eb1f0d801e140fffbdd6c1eb2b13e483299ab240"
+
 jobs:
   build-and-test:
     runs-on: ${{ matrix.os }}
@@ -20,8 +25,26 @@ jobs:
     steps:
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-colcon-coveragepy-result libfl-dev pip
-      - name: Install tamer
-        run: pip install unified_planning[tamer]
+
+      - name: Install unified planning from sources
+        run: |
+          git clone https://github.com/aiplan4eu/unified-planning.git
+          cd unified-planning
+          python3 -m pip install -r requirements.txt
+          python3 -m pip install -r dev-requirements.txt
+          python3 -m pip install tarski[arithmetic]
+          sudo apt install -y gringo
+          python3 -m pip install black==22.6.0
+          python3 -m black --check --exclude=unified_planning/grpc/generated/ .
+          python3 -m mypy unified_planning
+          python3 scripts/test_imports.py
+          cd ..
+          git clone -b ${{env.up_tamer_commit}} https://github.com/aiplan4eu/up-tamer
+          python3 -m pip install up-tamer/
+          git clone -b ac2b04d2${{env.up_pyperplan_commit}} https://github.com/aiplan4eu/up-pyperplan
+          python3 -m pip install up-pyperplan/
+          pip install unified_planning[tamer]
+
       - name: Create custom repos
         run: wget -O /tmp/all.repos https://raw.githubusercontent.com/PlanSys2/UPF4ROS2/main/upf.repos
       - name: build and test
