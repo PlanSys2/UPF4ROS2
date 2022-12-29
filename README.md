@@ -17,6 +17,46 @@ $ cd ..
 $ colcon build --symlink-install
 ```
 
+### Install UPF from sources
+```
+$ cd src
+$ git clone https://github.com/aiplan4eu/unified-planning.git
+$ cd unified-planning
+$ python3 -m pip install -r requirements.txt
+$ python3 -m pip install -r dev-requirements.txt
+$ python3 -m pip install tarski[arithmetic]
+$ sudo apt install -y gringo
+$ python3 -m pip install black==22.6.0
+$ python3 -m black --check --exclude=unified_planning/grpc/generated/ .
+$ python3 -m mypy unified_planning
+$ python3 scripts/test_imports.py
+$ cd ..
+$ git clone -b 869e7ab06cf23c5541a47f46209159fd51d8021f https://github.com/aiplan4eu/up-tamer
+$ python3 -m pip install up-tamer/
+$ git clone -b ac2b04d2d41c20b15f7c4143c19947f9704d1888 https://github.com/aiplan4eu/up-pyperplan
+$ python3 -m pip install up-pyperplan/
+```
+
+Install Java 17, with:
+
+```
+$ sudo apt install openjdk-17-jdk openjdk-17-jre
+```
+
+```
+$ git clone https://gitlab.com/enricos83/ENHSP-Public.git
+$ cd ENHSP-Public; git checkout enhsp20-0.9.5; ./compile; cd ..
+$ mkdir .planners; mv ENHSP-Public/enhsp-dist .planners/enhsp-20; rm -rf ENHSP-Public
+```
+
+Check with :
+
+```
+$ cd unified-planning
+$ bash run_tests.sh
+```
+
+
 ## Usage
 
 `$ ros2 launch  upf4ros2 upf4ros2.launch.py`
