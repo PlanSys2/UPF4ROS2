@@ -24,8 +24,9 @@ jobs:
       fail-fast: false
     steps:
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-colcon-coveragepy-result libfl-dev pip
-
+        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip
+      - name: fix pytest name
+        run: sudo ln -s /usr/bin/pytest-3 /usr/bin/pytest
       - name: Install unified planning from sources
         run: |
           git clone https://github.com/aiplan4eu/unified-planning.git

@@ -16,7 +16,10 @@
 # This module started from the test_protobuf_io.py module from the
 # AIPlan4EU project, with the same license
 
+
 import unittest
+
+import pytest
 
 from unified_planning import engines, model, shortcuts
 from unified_planning.model import metrics
@@ -33,6 +36,7 @@ from unified_planning.shortcuts import (
 from unified_planning.test.examples import get_example_problems
 
 
+@pytest.mark.rostest
 class TestROS2Interfaces(unittest.TestCase):
 
     @classmethod
