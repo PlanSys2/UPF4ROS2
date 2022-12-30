@@ -68,15 +68,11 @@ class TestUPF4ROS2(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        cls.context = rclpy.context.Context()
-        rclpy.init(context=cls.context)
-        cls.node = rclpy.create_node('TestUPF4ROS2', context=cls.context)
-        shortcuts.get_env().credits_stream = None
+        pass
 
     @classmethod
     def tearDownClass(cls):
-        cls.node.destroy_node()
-        rclpy.shutdown(context=cls.context)
+        pass
 
     def test_plan_from_file_pddl_no_tt(self):
         rclpy.init(args=None)
