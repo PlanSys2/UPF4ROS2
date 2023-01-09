@@ -1,0 +1,33 @@
+<?xml version="1.0"?>
+<?xml-model href="http://download.ros.org/schema/package_format3.xsd" schematypens="http://www.w3.org/2001/XMLSchema"?>
+<package format="3">
+  <name>plansys2_upf_plan_solver</name>
+  <version>2.0.8</version>
+  
+  <description>This package contains the PDDL-based Planner module for the ROS2 Planning System using UPF</description>
+
+  <maintainer email="fmrico@gmail.com">Francisco Martin Rico</maintainer>
+ 
+  <license>Apache License, Version 2.0</license>
+
+  <buildtool_depend>ament_cmake</buildtool_depend>
+
+  <depend>rclcpp</depend>
+  <depend>rclcpp_action</depend>
+  <depend>ament_index_cpp</depend>
+  <depend>plansys2_core</depend>
+  <depend>pluginlib</depend>
+  <depend>upf_msgs</depend>
+  
+  <exec_depend>upf4ros2</exec_depend>
+
+  <test_depend>ament_lint_common</test_depend>
+  <test_depend>ament_lint_auto</test_depend>
+  <test_depend>ament_cmake_gtest</test_depend>
+  <test_depend>ros2run</test_depend>
+
+  <export>
+    <build_type>ament_cmake</build_type>
+    <plansys2_core plugin="${prefix}/plansys2_upf_plan_solver_plugin.xml" />
+  </export>
+</package>
