@@ -53,6 +53,7 @@ rosidl_generate_interfaces(${PROJECT_NAME}
   "srv/AddObject.srv"
   "srv/SetInitialValue.srv"
   "srv/AddGoal.srv"
+  "srv/PDDLPlanOneShot.srv"
   "action/PDDLPlanOneShot.action"
   "action/PlanOneShot.action"
   "action/PlanOneShotRemote.action"

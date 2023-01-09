@@ -50,6 +50,7 @@ from upf_msgs.srv import (
     SetInitialValue,
     SetProblem
 )
+from upf_msgs.srv import PDDLPlanOneShot as PDDLPlanOneShotSrv
 
 
 def spin_srv(executor):
@@ -97,7 +98,7 @@ class TestUPF4ROS2(unittest.TestCase):
             goal_msg.plan_request.domain,
             goal_msg.plan_request.problem)
 
-        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShotPDDL')
+        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/action/planOneShotPDDL')
 
         def goal_response_callback(future):
             goal_handle = future.result()
@@ -168,7 +169,7 @@ class TestUPF4ROS2(unittest.TestCase):
             goal_msg.plan_request.domain,
             goal_msg.plan_request.problem)
 
-        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/planOneShotPDDL')
+        client = ActionClient(node_cli, PDDLPlanOneShot, 'upf4ros2/action/planOneShotPDDL')
 
         def goal_response_callback(future):
             goal_handle = future.result()
@@ -231,7 +232,7 @@ class TestUPF4ROS2(unittest.TestCase):
         goal_msg = PlanOneShot.Goal()
         goal_msg.plan_request.problem = pb_writter.convert(problem)
 
-        client = ActionClient(node_cli, PlanOneShot, 'upf4ros2/planOneShot')
+        client = ActionClient(node_cli, PlanOneShot, 'upf4ros2/action/planOneShot')
 
         def goal_response_callback(future):
             goal_handle = future.result()
@@ -275,6 +276,51 @@ class TestUPF4ROS2(unittest.TestCase):
         rclpy.shutdown()
         executor_thread.join()
 
+    def test_plan_from_file_pddl_tt_service(self):
+        rclpy.init(args=None)
+
+        executor = rclpy.executors.SingleThreadedExecutor()
+        node_test = upf4ros2_main.UPF4ROS2Node()
+        node_cli = rclpy.create_node('test_plan_from_file_pddl_tt_service')
+        executor.add_node(node_test)
+        executor.add_node(node_cli)
+        executor_thread = threading.Thread(target=executor.spin, daemon=True)
+        executor_thread.start()
+
+        client = node_cli.create_client(PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL')
+        while not client.wait_for_service(timeout_sec=1.0):
+            self.get_logger().info('service not available, waiting again...')
+
+        srv = PDDLPlanOneShotSrv.Request()
+        srv.plan_request.mode = msgs.PDDLPlanRequest.FILE
+        srv.plan_request.domain = (get_package_share_directory('upf4ros2')
+                                        + '/pddl/domain_tt.pddl')
+        srv.plan_request.problem = (get_package_share_directory('upf4ros2')
+                                         + '/pddl/problem_tt_1.pddl')
+
+        reader = PDDLReader()
+        upf_problem = reader.parse_problem(
+            srv.plan_request.domain,
+            srv.plan_request.problem)
+
+        response = client.call(srv)
+        
+        pb_reader = ROS2InterfaceReader()
+        upf_plan = pb_reader.convert(response.plan_result.plan, upf_problem)
+        node_cli.get_logger().info('Received feedback: {0}'.
+                                   format(upf_plan))
+
+        good_plan = '[(Fraction(0, 1), move(leia, kitchen, bedroom), Fraction(5, 1))]'
+        self.assertEqual(upf_plan.__repr__(), good_plan)
+        self.assertTrue(response.success)
+        self.assertEqual(response.message, '')
+
+        node_cli.destroy_node()
+        node_test.destroy_node()
+        executor.shutdown()
+        rclpy.shutdown()
+        executor_thread.join()
+
     def test_new_problem(self):
         rclpy.init(args=None)
 
@@ -286,7 +332,7 @@ class TestUPF4ROS2(unittest.TestCase):
         executor_thread = threading.Thread(target=executor.spin, daemon=True)
         executor_thread.start()
 
-        client = node_cli.create_client(NewProblem, 'upf4ros2/new_problem')
+        client = node_cli.create_client(NewProblem, 'upf4ros2/srv/new_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -320,7 +366,7 @@ class TestUPF4ROS2(unittest.TestCase):
         executor_thread = threading.Thread(target=executor.spin, daemon=True)
         executor_thread.start()
 
-        client = node_cli.create_client(SetProblem, 'upf4ros2/set_problem')
+        client = node_cli.create_client(SetProblem, 'upf4ros2/srv/set_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -344,7 +390,7 @@ class TestUPF4ROS2(unittest.TestCase):
         self.assertFalse(response.success)
         self.assertEqual(response.message, 'Problem problem_test_robot already exists')
 
-        client2 = node_cli.create_client(GetProblem, 'upf4ros2/get_problem')
+        client2 = node_cli.create_client(GetProblem, 'upf4ros2/srv/get_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -377,7 +423,7 @@ class TestUPF4ROS2(unittest.TestCase):
         executor_thread = threading.Thread(target=executor.spin, daemon=True)
         executor_thread.start()
 
-        client = node_cli.create_client(SetProblem, 'upf4ros2/set_problem')
+        client = node_cli.create_client(SetProblem, 'upf4ros2/srv/set_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -395,7 +441,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         # Make changes in local and request in global, and check for diffs
 
-        add_fluent_cli = node_cli.create_client(AddFluent, 'upf4ros2/add_fluent')
+        add_fluent_cli = node_cli.create_client(AddFluent, 'upf4ros2/srv/add_fluent')
 
         Location = shortcuts.UserType('Location')
         robot_at = model.Fluent(
@@ -424,7 +470,7 @@ class TestUPF4ROS2(unittest.TestCase):
         problem.add_fluent(robot_at, default_initial_value=False)
 
         set_initial_value_cli = node_cli.create_client(
-            SetInitialValue, 'upf4ros2/set_initial_value')
+            SetInitialValue, 'upf4ros2/srv/set_initial_value')
         set_initial_value_srv = SetInitialValue.Request()
         set_initial_value_srv.problem_name = 'problem_test_robot'
         l2 = model.Object('l2', Location)
@@ -437,7 +483,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         problem.set_initial_value(robot_at(l2), False)
 
-        add_goal_cli = node_cli.create_client(AddGoal, 'upf4ros2/add_goal')
+        add_goal_cli = node_cli.create_client(AddGoal, 'upf4ros2/srv/add_goal')
         add_goal_srv = AddGoal.Request()
         add_goal_srv.problem_name = 'problem_test_robot'
         l1 = model.Object('l1', Location)
@@ -452,7 +498,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         ###############################################################
 
-        client2 = node_cli.create_client(GetProblem, 'upf4ros2/get_problem')
+        client2 = node_cli.create_client(GetProblem, 'upf4ros2/srv/get_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -485,7 +531,7 @@ class TestUPF4ROS2(unittest.TestCase):
         executor_thread = threading.Thread(target=executor.spin, daemon=True)
         executor_thread.start()
 
-        client = node_cli.create_client(SetProblem, 'upf4ros2/set_problem')
+        client = node_cli.create_client(SetProblem, 'upf4ros2/srv/set_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -503,7 +549,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         # Make changes in local and request in global, and check for diffs
 
-        add_action_cli = node_cli.create_client(AddAction, 'upf4ros2/add_action')
+        add_action_cli = node_cli.create_client(AddAction, 'upf4ros2/srv/add_action')
 
         Location = shortcuts.UserType('Location')
         robot_at = model.Fluent('robot_at', shortcuts.BoolType(), l=Location)
@@ -527,7 +573,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         ###############################################################
 
-        client2 = node_cli.create_client(GetProblem, 'upf4ros2/get_problem')
+        client2 = node_cli.create_client(GetProblem, 'upf4ros2/srv/get_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -559,7 +605,7 @@ class TestUPF4ROS2(unittest.TestCase):
         executor_thread = threading.Thread(target=executor.spin, daemon=True)
         executor_thread.start()
 
-        client = node_cli.create_client(SetProblem, 'upf4ros2/set_problem')
+        client = node_cli.create_client(SetProblem, 'upf4ros2/srv/set_problem')
         while not client.wait_for_service(timeout_sec=1.0):
             self.get_logger().info('service not available, waiting again...')
 
@@ -577,7 +623,7 @@ class TestUPF4ROS2(unittest.TestCase):
 
         # Make changes in local and request in global, and check for diffs
 
-        add_object_cli = node_cli.create_client(AddObject, 'upf4ros2/add_object')
+        add_object_cli = node_cli.create_client(AddObject, 'upf4ros2/srv/add_object')
 
         Location = shortcuts.UserType('Location')
 
