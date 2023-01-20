@@ -30,7 +30,8 @@ from typing import (
 
 from unified_planning import Environment
 from unified_planning import model
-from unified_planning.exceptions import UPException
+from unified_planning.exceptions import UPException, UPValueError
+from unified_planning import shortcuts
 from unified_planning.model import (
     DurativeAction,
     Effect,
@@ -68,7 +69,12 @@ def convert_type_str(s: str, problem: Problem) -> model.types.Type:
         )
     else:
         assert not s.startswith('up:'), f'Unhandled builtin type: {s}'
-        return problem.user_type(s)
+        user_type=None
+        try:
+            user_type=problem.user_type(s)
+        except UPValueError:
+            user_type=shortcuts.UserType(s)
+        return user_type
 
 
 # The operators are based on SExpressions supported in PDDL.
