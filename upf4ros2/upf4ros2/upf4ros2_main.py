@@ -207,7 +207,7 @@ class UPF4ROS2Node(Node):
 
         with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
             result = planner.solve(upf_problem)
-            print('%s returned: %s' % (planner.name, result.plan))
+            self.get_logger().info('%s returned: %s' % (planner.name, result.plan))
 
             feedback_msg = PDDLPlanOneShot.Feedback()
             feedback_msg.plan_result = self._ros2_interface_writer.convert(result)

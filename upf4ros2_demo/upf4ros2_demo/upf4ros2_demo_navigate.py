@@ -1,4 +1,5 @@
 import tempfile
+from ament_index_python.packages import get_package_share_directory
 
 import rclpy
 from rclpy.action import ActionClient
@@ -50,6 +51,11 @@ class UPF4ROS2DemoNode(Node):
             PlanOneShot,
             'upf4ros2/planOneShot')
 
+        self._plan_pddl_one_shot_client = ActionClient(
+            self, 
+            PDDLPlanOneShot, 
+            'upf4ros2/planOneShotPDDL')
+
         self._get_problem = self.create_client(
             GetProblem, 'upf4ros2/get_problem')
         self._new_problem = self.create_client(
@@ -74,7 +80,7 @@ class UPF4ROS2DemoNode(Node):
         rclpy.spin_until_future_complete(self, self.future)
 
         self._problem_name = problem_name
-        self.get_logger().info(f'New problem: {srv.problem_name}')
+        self.get_logger().info(f'Create the problem with name: {srv.problem_name}')
         
 
     def get_problem(self):
@@ -108,7 +114,7 @@ class UPF4ROS2DemoNode(Node):
         self.future = self._add_fluent.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
-        self.get_logger().info(f'Fluent {fluent_name} added')
+        self.get_logger().info(f'Add fluent: {fluent_name}')
         return fluent
 
 
@@ -122,7 +128,7 @@ class UPF4ROS2DemoNode(Node):
         self.future = self._add_object.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
-        self.get_logger().info(f'Object {object_name} added')
+        self.get_logger().info(f'Add Object: {object_name}')
 
         return upf_object
 
@@ -146,7 +152,7 @@ class UPF4ROS2DemoNode(Node):
         self.future = self._set_initial_value.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
-        self.get_logger().info(f'Set {fluent.name}({object.name}) {value_fluent}')
+        self.get_logger().info(f'Set {fluent.name}({object.name}) with value :{value_fluent}')
     
     def add_action(self, action):
         srv = AddAction.Request()
@@ -157,7 +163,7 @@ class UPF4ROS2DemoNode(Node):
         self.future = self._add_action.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
-        self.get_logger().info(f'Add {action.name} action')
+        self.get_logger().info(f'Add action: {action.name}')
 
     def add_goal(self, goal):
         srv = AddGoal.Request()
@@ -173,6 +179,7 @@ class UPF4ROS2DemoNode(Node):
         self.get_logger().info(f'Set new goal!')
 
     def get_plan(self):
+        self.get_logger().info('Planning...')
         problem = self.get_problem()
         goal_msg = PlanOneShot.Goal()
         goal_msg.plan_request.problem = self._ros2_interface_writer.convert(problem)
@@ -180,20 +187,20 @@ class UPF4ROS2DemoNode(Node):
         self._plan_one_shot_client.wait_for_server()
         self.future = self._plan_one_shot_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
         self.future.add_done_callback(self.goal_response_callback)
-        
+
 
     def goal_response_callback(self, future):
         goal_handle = future.result()
         if not goal_handle.accepted:
-            self.get_logger().info('Goal rejected :(')
+            self.get_logger().info('Solution not found :(')
             return
 
-        self.get_logger().info('Goal accepted :)')
+        self.get_logger().info('Solution found :)')
 
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
-        [self.get_logger().info(f'{i}') for i in feedback.plan_result.plan.actions]
+        #[self.get_logger().info(f'{i}') for i in feedback.plan_result.plan.actions]
 
         
 
@@ -208,7 +215,7 @@ def main(args=None):
 
     # usertype is the type of the fluent's object
     # usertype can be 'up:bool', 'up:integer', 'up:integer[]', 'up:real', 'up:real[]', shortcuts.UserType('name')
-    location = shortcuts.UserType('Location')
+    location = shortcuts.UserType('location')
 
     robot_at = upf4ros2_demo_node.add_fluent(problem, 'robot_at', location)
 
@@ -218,11 +225,18 @@ def main(args=None):
     upf4ros2_demo_node.set_initial_value(robot_at, l1, True)
     upf4ros2_demo_node.set_initial_value(robot_at, l2, False)
 
-    # Define navigation action
+    # Define navigation action (InstantaneousAction or DurativeAction)
     move = model.InstantaneousAction('move', l_from=location, l_to=location)
+    # move = model.DurativeAction('move', l_from=location, l_to=location)
+    # If DurativeAction
+    # Set the action's duration (set_closed_duration_interval, set_open_duration_interval, set_fixed_duration, set_left_open_duration_interval or set_right_open_duration_interval)
+    # move.set_closed_duration_interval(0, 10)
+    
     l_from = move.parameter('l_from')
     l_to = move.parameter('l_to')
+    
     move.add_precondition(robot_at(l_from))
+    #move.add_condition(model.StartTiming(), robot_at(l_from))
     move.add_effect(robot_at(l_from), False)
     move.add_effect(robot_at(l_to), True)
 
