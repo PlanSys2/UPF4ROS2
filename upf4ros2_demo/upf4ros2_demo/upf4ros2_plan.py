@@ -5,34 +5,16 @@ import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
 
-from unified_planning import model
-from unified_planning.io.pddl_reader import PDDLReader
-from unified_planning.shortcuts import OneshotPlanner
-
 from upf4ros2.ros2_interface_reader import ROS2InterfaceReader
 from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
-from unified_planning import model
-from unified_planning import shortcuts
-from upf_msgs import msg as msgs
+
 
 from upf_msgs.action import (
-    PDDLPlanOneShot,
     PlanOneShot
 )
 
-from upf_msgs.msg import (
-    PDDLPlanRequest
-)
-
 from upf_msgs.srv import (
-    AddAction,
-    AddFluent,
-    AddGoal,
-    AddObject,
     GetProblem,
-    NewProblem,
-    SetInitialValue,
-    SetProblem
 )
 
 
@@ -87,7 +69,6 @@ class UPF4ROS2PlanNode(Node):
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
-        #[self.get_logger().info(f'{i}') for i in feedback.plan_result.plan.actions]
 
         
 

@@ -64,26 +64,8 @@ class UPF4ROS2PDDLNode(Node):
         goal_msg.plan_request.problem = (get_package_share_directory('upf4ros2_demo')
                                         + str(self._problem.value))
 
-        upf_problem = PDDLReader().parse_problem(
-            goal_msg.plan_request.domain,
-            goal_msg.plan_request.problem)
-
-
-        #self.future = self._plan_pddl_one_shot_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
-        #self.future.add_done_callback(self.goal_response_callback)
-        
-        #actions = [self._ros2_interface_reader.convert(i) for i in res.]
-        def feedback_callback(feedback_msg):
-            
-            feedback = feedback_msg.feedback
-            pb_reader = ROS2InterfaceReader()
-            upf_plan = pb_reader.convert(feedback.plan_result.plan, upf_problem)
-            UPF4ROS2PDDLNode.get_logger().info('Received feedback: {0}'.
-                                       format(upf_plan))
-
         self._plan_pddl_one_shot_client.wait_for_server()
 
-        #res = self._plan_pddl_one_shot_client.send_goal_async(goal_msg, feedback_callback=feedback_callback)
         res = self._plan_pddl_one_shot_client.send_goal_async(goal_msg)
         res.add_done_callback(self.goal_response_callback)
 
@@ -111,8 +93,6 @@ def main(args=None):
 
     res = upf4ros2_pddl_node.get_plan()
     rclpy.spin(upf4ros2_pddl_node)
-    #rclpy.spin_until_future_complete(upf4ros2_pddl_node, res)
-    #upf4ros2_pddl_node.get_logger().info(f'{res}')
 
     upf4ros2_pddl_node.destroy_node()
     executor.shutdown()

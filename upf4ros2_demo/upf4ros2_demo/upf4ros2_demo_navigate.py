@@ -6,8 +6,6 @@ from rclpy.action import ActionClient
 from rclpy.node import Node
 
 from unified_planning import model
-from unified_planning.io.pddl_reader import PDDLReader
-from unified_planning.shortcuts import OneshotPlanner
 
 from upf4ros2.ros2_interface_reader import ROS2InterfaceReader
 from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
@@ -20,10 +18,6 @@ from upf_msgs.action import (
     PlanOneShot
 )
 
-from upf_msgs.msg import (
-    PDDLPlanRequest
-)
-
 from upf_msgs.srv import (
     AddAction,
     AddFluent,
@@ -31,8 +25,7 @@ from upf_msgs.srv import (
     AddObject,
     GetProblem,
     NewProblem,
-    SetInitialValue,
-    SetProblem
+    SetInitialValue
 )
 
 
