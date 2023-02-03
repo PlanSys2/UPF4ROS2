@@ -15,6 +15,7 @@ setup(
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
         (os.path.join('share', package_name, 'pddl'), glob('test/pddl/*')),
+        (os.path.join("share", package_name, "params"), glob("params/*.yaml")),
     ],
     install_requires=['setuptools'],
     zip_safe=True,
@@ -27,7 +28,8 @@ setup(
         'console_scripts': [
             'upf4ros2_demo_navigate = upf4ros2_demo.upf4ros2_demo_navigate:main',
             'upf4ros2_pddlfile = upf4ros2_demo.upf4ros2_pddlfile:main',
-            'upf4ros2_plan = upf4ros2_demo.upf4ros2_plan:main'
+            'upf4ros2_plan = upf4ros2_demo.upf4ros2_plan:main',
+            'upf4ros2_navigation_action = upf4ros2_demo.upf4ros2_navigation_action:main'
         ],
     },
 )

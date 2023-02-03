@@ -1,6 +1,3 @@
-import tempfile
-from ament_index_python.packages import get_package_share_directory
-
 import rclpy
 from rclpy.action import ActionClient
 from rclpy.node import Node
@@ -12,6 +9,8 @@ from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
 from unified_planning import model
 from unified_planning import shortcuts
 from upf_msgs import msg as msgs
+from std_msgs.msg import String
+from upf4ros2_demo_interfaces.srv import CallAction
 
 from upf_msgs.action import (
     PDDLPlanOneShot,
@@ -32,7 +31,7 @@ from upf_msgs.srv import (
 class UPF4ROS2DemoNode(Node):
 
     def __init__(self):
-        super().__init__('upf4ros2_demo')
+        super().__init__('upf4ros2_demo_navigate')
 
         self._problem_name = ''
 
@@ -63,6 +62,7 @@ class UPF4ROS2DemoNode(Node):
             SetInitialValue, 'upf4ros2/set_initial_value')
         self._add_goal = self.create_client(
             AddGoal, 'upf4ros2/add_goal')
+    
 
     def new_problem(self, problem_name):
         srv = NewProblem.Request()
@@ -193,7 +193,20 @@ class UPF4ROS2DemoNode(Node):
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
-        #[self.get_logger().info(f'{i}') for i in feedback.plan_result.plan.actions]
+        for action in feedback.plan_result.plan.actions:
+
+            client = self.create_client(CallAction, action.action_name)
+            while not client.wait_for_service(timeout_sec=1.0):
+                self.get_logger().info('service not available, waiting again...')
+
+            req = CallAction.Request()
+            req.action_name = action.action_name
+            req.parameters.append(action.parameters[1].symbol_atom[0])
+            self.get_logger().info(f'{req}')
+            future = client.call_async(req)
+            rclpy.spin_until_future_complete(self, future)
+
+
 
         
 
