@@ -2,13 +2,13 @@
     (:domain test)
     (:objects
         ; locations
-        l1 l2 - location
+        livingroom entrance - location
     )
     (:init
-        ; the robot at start is at l1
-        (robot_at l1)
+        ; the robot at start is at livingroom
+        (robot_at livingroom)
     )
     (:goal
-        (robot_at l2)
+        (robot_at entrance)
     )
 )

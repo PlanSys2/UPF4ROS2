@@ -22,6 +22,8 @@ from upf_msgs.srv import (
     GetProblem,
 )
 
+from upf_msgs.srv import PDDLPlanOneShot as PDDLPlanOneShotSrv
+
 class UPF4ROS2PDDLNode(Node):
 
     def __init__(self):
@@ -44,6 +46,9 @@ class UPF4ROS2PDDLNode(Node):
         self._get_problem = self.create_client(
             GetProblem, 'upf4ros2/get_problem')
 
+        self._plan_pddl_one_shot_client_srv = self.create_client(
+            PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL')
+
     def get_problem(self):
         srv = GetProblem.Request()
         srv.problem_name = self._problem_name
@@ -54,7 +59,7 @@ class UPF4ROS2PDDLNode(Node):
         problem = self._ros2_interface_reader.convert(self.future.result().problem)
         return problem
 
-    def get_plan(self):
+    def get_plan_action(self):
         
         self.get_logger().info('Planning...')
         goal_msg = PDDLPlanOneShot.Goal()
@@ -79,25 +84,42 @@ class UPF4ROS2PDDLNode(Node):
 
         self.get_logger().info('Solution found :)')
 
+    def get_plan_srv(self):
+        
+        self.get_logger().info('Planning...')
+        srv = PDDLPlanOneShotSrv.Request()
+        srv.plan_request.mode = msgs.PDDLPlanRequest.FILE
+        srv.plan_request.domain = (get_package_share_directory('upf4ros2_demo')
+                                        + str(self._domain.value))
+        srv.plan_request.problem = (get_package_share_directory('upf4ros2_demo')
+                                        + str(self._problem.value))
+
+        self._plan_pddl_one_shot_client_srv.wait_for_service()
+
+        self.future = self._plan_pddl_one_shot_client_srv.call_async(srv)
+        rclpy.spin_until_future_complete(self, self.future)
+
+        plan_result = self.future.result().plan_result
+        for action in plan_result.plan.actions:
+
+            params = [x.symbol_atom[0] for x in action.parameters]
+            self.get_logger().info(action.action_name+"("+", ".join(params)+")")
+
+
+
+
         
 
 def main(args=None):
     rclpy.init(args=args)
 
-    executor = rclpy.executors.SingleThreadedExecutor()
     upf4ros2_pddl_node = UPF4ROS2PDDLNode()
 
-    executor.add_node(upf4ros2_pddl_node)
-    executor_thread = threading.Thread(target=executor.spin, daemon=True)
-    executor_thread.start()
-
-    res = upf4ros2_pddl_node.get_plan()
+    upf4ros2_pddl_node.get_plan_srv()
     rclpy.spin(upf4ros2_pddl_node)
 
     upf4ros2_pddl_node.destroy_node()
-    executor.shutdown()
     rclpy.shutdown()
-    executor_thread.join()
 
 
 if __name__ == '__main__':

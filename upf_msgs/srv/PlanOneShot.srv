@@ -1,0 +1,5 @@
+upf_msgs/Problem problem
+---
+upf_msgs/PlanGenerationResult plan_result
+bool success
+string message

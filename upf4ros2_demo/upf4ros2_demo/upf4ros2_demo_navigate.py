@@ -9,7 +9,6 @@ from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
 from unified_planning import model
 from unified_planning import shortcuts
 from upf_msgs import msg as msgs
-from std_msgs.msg import String
 from upf4ros2_demo_interfaces.srv import CallAction
 
 from upf_msgs.action import (
@@ -27,6 +26,7 @@ from upf_msgs.srv import (
     SetInitialValue
 )
 
+from upf_msgs.srv import PlanOneShot as PlanOneShotSrv
 
 class UPF4ROS2DemoNode(Node):
 
@@ -34,6 +34,7 @@ class UPF4ROS2DemoNode(Node):
         super().__init__('upf4ros2_demo_navigate')
 
         self._problem_name = ''
+        self._plan_result = {}
 
         self._ros2_interface_writer = ROS2InterfaceWriter()
         self._ros2_interface_reader = ROS2InterfaceReader()
@@ -62,6 +63,8 @@ class UPF4ROS2DemoNode(Node):
             SetInitialValue, 'upf4ros2/set_initial_value')
         self._add_goal = self.create_client(
             AddGoal, 'upf4ros2/add_goal')
+        self._plan_one_shot_client_srv = self.create_client(
+            PlanOneShotSrv, 'upf4ros2/srv/planOneShot')  
     
 
     def new_problem(self, problem_name):
@@ -83,7 +86,8 @@ class UPF4ROS2DemoNode(Node):
         self._get_problem.wait_for_service()
         self.future = self._get_problem.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
-        problem = self._ros2_interface_reader.convert(self.future.result().problem)
+        # problem = self._ros2_interface_reader.convert(self.future.result().problem)
+        problem = self.future.result().problem
         return problem
 
     def add_fluent(self, problem, fluent_name, user_type):
@@ -145,7 +149,7 @@ class UPF4ROS2DemoNode(Node):
         self.future = self._set_initial_value.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
-        self.get_logger().info(f'Set {fluent.name}({object.name}) with value :{value_fluent}')
+        self.get_logger().info(f'Set {fluent.name}({object.name}) with value: {value_fluent}')
     
     def add_action(self, action):
         srv = AddAction.Request()
@@ -171,7 +175,7 @@ class UPF4ROS2DemoNode(Node):
 
         self.get_logger().info(f'Set new goal!')
 
-    def get_plan(self):
+    def get_plan_action(self):
         self.get_logger().info('Planning...')
         problem = self.get_problem()
         goal_msg = PlanOneShot.Goal()
@@ -193,7 +197,11 @@ class UPF4ROS2DemoNode(Node):
 
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
+
         for action in feedback.plan_result.plan.actions:
+
+            params = [x.symbol_atom[0] for x in action.parameters]
+            self.get_logger().info(action.action_name+"("+params[0]+", "+params[1]+")")
 
             client = self.create_client(CallAction, action.action_name)
             while not client.wait_for_service(timeout_sec=1.0):
@@ -201,11 +209,44 @@ class UPF4ROS2DemoNode(Node):
 
             req = CallAction.Request()
             req.action_name = action.action_name
-            req.parameters.append(action.parameters[1].symbol_atom[0])
-            self.get_logger().info(f'{req}')
-            future = client.call_async(req)
-            rclpy.spin_until_future_complete(self, future)
+            req.parameters = action.parameters
 
+            self.res = client.call_async(req)
+            rclpy.spin_until_future_complete(self, self.res)
+
+    def get_plan_srv(self):
+        
+        problem = self.get_problem()
+
+        self.get_logger().info('Planning...')
+        srv = PlanOneShotSrv.Request()
+        srv.problem = problem
+
+        self._plan_one_shot_client_srv.wait_for_service()
+
+        self.future = self._plan_one_shot_client_srv.call_async(srv)
+        rclpy.spin_until_future_complete(self, self.future)
+
+        plan_result = self.future.result().plan_result
+        for action in plan_result.plan.actions:
+
+            params = [x.symbol_atom[0] for x in action.parameters]
+            self.get_logger().info(action.action_name+"("+", ".join(params)+")")
+            client = self.create_client(CallAction, action.action_name)
+            while not client.wait_for_service(timeout_sec=1.0):
+                self.get_logger().info('service not available, waiting again...')
+
+            req = CallAction.Request()
+            req.action_name = action.action_name
+            req.parameters = action.parameters
+
+            self.res = client.call_async(req)
+            rclpy.spin_until_future_complete(self, self.res)
+
+            if self.res.result().result:
+                self.get_logger().info('Action completed')
+            else:
+                self.get_logger().info('Action cancelled!')
 
 
         
@@ -217,7 +258,7 @@ def main(args=None):
     upf4ros2_demo_node = UPF4ROS2DemoNode()
 
     upf4ros2_demo_node.new_problem('test')
-    problem = upf4ros2_demo_node.get_problem()
+    problem = upf4ros2_demo_node._ros2_interface_reader.convert(upf4ros2_demo_node.get_problem())
 
     # usertype is the type of the fluent's object
     # usertype can be 'up:bool', 'up:integer', 'up:integer[]', 'up:real', 'up:real[]', shortcuts.UserType('name')
@@ -225,8 +266,8 @@ def main(args=None):
 
     robot_at = upf4ros2_demo_node.add_fluent(problem, 'robot_at', location)
 
-    l1 = upf4ros2_demo_node.add_object('l1', location)
-    l2 = upf4ros2_demo_node.add_object('l2', location)
+    l1 = upf4ros2_demo_node.add_object('livingroom', location)
+    l2 = upf4ros2_demo_node.add_object('entrance', location)
 
     upf4ros2_demo_node.set_initial_value(robot_at, l1, True)
     upf4ros2_demo_node.set_initial_value(robot_at, l2, False)
@@ -250,7 +291,11 @@ def main(args=None):
 
     upf4ros2_demo_node.add_goal(robot_at(l2))
 
-    upf4ros2_demo_node.get_plan()
+    upf4ros2_demo_node.get_plan_srv()
+
+    problem_updated = upf4ros2_demo_node._ros2_interface_reader.convert(upf4ros2_demo_node.get_problem())
+    upf4ros2_demo_node.get_logger().info(f'{problem_updated}')
+
     rclpy.spin(upf4ros2_demo_node)
 
     upf4ros2_demo_node.destroy_node()

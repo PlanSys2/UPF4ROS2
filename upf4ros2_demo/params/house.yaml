@@ -1,7 +1,7 @@
 upf4ros2_navigation_action:
   ros__parameters:
     wps:
-      - "l2"
+      - "entrance"
       - "5.80"
       - "-4.63"
       - "-0.77"
