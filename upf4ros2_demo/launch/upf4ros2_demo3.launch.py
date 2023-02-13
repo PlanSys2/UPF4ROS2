@@ -3,7 +3,6 @@ from launch_ros.actions import Node
 from launch.actions import DeclareLaunchArgument
 from launch.substitutions import LaunchConfiguration
 from ament_index_python.packages import get_package_share_directory
-import yaml, os
 
 
 def generate_launch_description():
@@ -38,8 +37,8 @@ def generate_launch_description():
 
     upf4ros2_demo_cmd = Node(
         package=pkg_name,
-        executable="upf4ros2_demo_navigate",
-        name="upf4ros2_demo_navigate",
+        executable="upf4ros2_demo3",
+        name="upf4ros2_demo3",
         output='screen')
 
     ld = LaunchDescription()

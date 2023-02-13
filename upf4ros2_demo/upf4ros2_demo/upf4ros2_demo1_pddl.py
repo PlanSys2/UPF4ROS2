@@ -24,10 +24,10 @@ from upf_msgs.srv import (
 
 from upf_msgs.srv import PDDLPlanOneShot as PDDLPlanOneShotSrv
 
-class UPF4ROS2PDDLNode(Node):
+class UPF4ROS2Demo1PDDL(Node):
 
     def __init__(self):
-        super().__init__('upf4ros2_pddl')
+        super().__init__('upf4ros2_demo1_pddl')
 
         self.declare_parameter('domain', '/pddl/domain.pddl')
         self.declare_parameter('problem', '/pddl/problem.pddl')
@@ -104,16 +104,12 @@ class UPF4ROS2PDDLNode(Node):
 
             params = [x.symbol_atom[0] for x in action.parameters]
             self.get_logger().info(action.action_name+"("+", ".join(params)+")")
-
-
-
-
         
 
 def main(args=None):
     rclpy.init(args=args)
 
-    upf4ros2_pddl_node = UPF4ROS2PDDLNode()
+    upf4ros2_pddl_node = UPF4ROS2Demo1PDDL()
 
     upf4ros2_pddl_node.get_plan_srv()
     rclpy.spin(upf4ros2_pddl_node)

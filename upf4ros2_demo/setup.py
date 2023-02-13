@@ -26,9 +26,11 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-            'upf4ros2_demo_navigate = upf4ros2_demo.upf4ros2_demo_navigate:main',
-            'upf4ros2_pddlfile = upf4ros2_demo.upf4ros2_pddlfile:main',
-            'upf4ros2_plan = upf4ros2_demo.upf4ros2_plan:main',
+            'upf4ros2_demo1 = upf4ros2_demo.upf4ros2_demo1:main',
+            'upf4ros2_demo1_pddl = upf4ros2_demo.upf4ros2_demo1_pddl:main',
+            'upf4ros2_demo1_bash = upf4ros2_demo.upf4ros2_demo1_bash:main',
+            'upf4ros2_demo2 = upf4ros2_demo.upf4ros2_demo2:main',
+            'upf4ros2_demo3 = upf4ros2_demo.upf4ros2_demo3:main',
             'upf4ros2_navigation_action = upf4ros2_demo.upf4ros2_navigation_action:main'
         ],
     },
