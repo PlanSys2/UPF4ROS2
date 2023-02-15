@@ -9,68 +9,53 @@ from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
 from unified_planning import model
 from unified_planning import shortcuts
 from upf_msgs import msg as msgs
+from std_msgs.msg import String
 from upf4ros2_demo_interfaces.srv import CallAction
 
 from upf_msgs.srv import (
     SetInitialValue,
+    GetProblem
 )
 
 from simple_node import Node
 
-class NavigationAction(Node):
+class CheckWpAction(Node):
 
     def __init__(self):
-        super().__init__('upf4ros2_navigation_action')
-
-        self.__wp_dict = {}
-
-        wps_param_name = "wps"
-
-        # declaring params
-        self.declare_parameter(wps_param_name, [''])
-
-        # getting params
-        waypoints = self.get_parameter(wps_param_name).get_parameter_value().string_array_value
-
-        # load points
-        self.load_wps(waypoints)
+        super().__init__('upf4ros2_check_wp_action')
 
         self._problem_name = 'test'
 
         self._userType = shortcuts.UserType('location')
-        self._fluent = model.Fluent("robot_at", shortcuts.BoolType(), object=self._userType)
+        self._fluent = model.Fluent("wp_checked", shortcuts.BoolType(), object=self._userType)
+        self._fluent_robot_at = model.Fluent("robot_at", shortcuts.BoolType(), object=self._userType)
 
         self._ros2_interface_writer = ROS2InterfaceWriter()
         self._ros2_interface_reader = ROS2InterfaceReader()
-        
-        self.__nav_to_pose_client = self.create_action_client(
-            NavigateToPose,
-            '/navigate_to_pose')
 
+        self._get_problem = self.create_client(
+            GetProblem, 'upf4ros2/get_problem')
         self._set_initial_value = self.create_client(
             SetInitialValue, 'upf4ros2/set_initial_value')
+        
 
         self.create_service(
-            CallAction, 'move', self.__execute_callback)
+            CallAction, 'check_wp', self.__execute_callback)
 
     
-    def load_wps(self, waypoints: List[str]):
-        """ load waypoints of list strings into a dictionary of floats
+    def get_problem(self):
+        """ get actual state of the problem
         Args:
-            points (List[str]): list of points
+        
         """
+        srv = GetProblem.Request()
+        srv.problem_name = self._problem_name
 
-        if not waypoints:
-            return
-
-        for i in range(0, len(waypoints), 5):
-            self.__wp_dict[waypoints[i]] = Pose()
-            self.__wp_dict[waypoints[i]].position.x = float(waypoints[i + 1])
-            self.__wp_dict[waypoints[i]].position.y = float(waypoints[i + 2])
-            self.__wp_dict[waypoints[i]].orientation.z = float(
-                waypoints[i + 3])
-            self.__wp_dict[waypoints[i]].orientation.w = float(
-                waypoints[i + 4])
+        self._get_problem.wait_for_service()
+        self.res = self._get_problem.call(srv)
+        # problem = self._ros2_interface_reader.convert(self.future.result().problem)
+        problem = self.res.problem
+        return problem
 
     def set_initial_value(self, fluent, object, value_fluent):
         """ set initial value to the fluent
@@ -108,32 +93,20 @@ class NavigationAction(Node):
         Returns:
             CallAction.Response: response with the result of the action
         """
-        l1 = model.Object(request.parameters[0].symbol_atom[0], self._userType)
-        l2 = model.Object(request.parameters[1].symbol_atom[0], self._userType)
+        problem = self._ros2_interface_reader.convert(self.get_problem())
 
-        self.get_logger().info("Starting action " + request.action_name)
+        wp = request.parameters[0].symbol_atom[0]
+        l1 = model.Object(wp, self._userType)
 
-        self.get_logger().info("Waiting for 'NavigateToPose' action server")
-        while not self.__nav_to_pose_client.wait_for_server():
-            self.get_logger().info("'NavigateToPose' action server not available, waiting...")
+        if str(problem.initial_values[self._fluent_robot_at(l1)]) == 'true':
 
-        wp = request.parameters[1].symbol_atom[0]
-        goal_msg = NavigateToPose.Goal()
-        goal_msg.pose.pose = self.__wp_dict[wp]
-        goal_msg.pose.header.frame_id = "map"
+            self.get_logger().info("Starting action " + request.action_name)
+            self.get_logger().info("Waypoint " + str(wp) + " checked.")
 
-        self.get_logger().info('Navigating to goal: ' + str(wp))
-
-        self.__nav_to_pose_client.send_goal(goal_msg)
-        self.__nav_to_pose_client.wait_for_result()
-
-        if self.__nav_to_pose_client.is_succeeded():
-            self.get_logger().info("Goal to " + str(wp) + " done")
-            self.set_initial_value(self._fluent, l1, False)
-            self.set_initial_value(self._fluent, l2, True)
+            self.set_initial_value(self._fluent, l1, True)
             response.result = True
         else:
-            self.get_logger().info("Goal to " + str(wp) + " was rejected!")
+            self.get_logger().info("Cannot check wp because the wp was not accesible.")
             response.result = False
             
         return response
@@ -141,9 +114,9 @@ class NavigationAction(Node):
 def main(args=None):
     rclpy.init(args=args)
 
-    navigation_action = NavigationAction()
+    check_wp_action = CheckWpAction()
 
-    navigation_action.join_spin()
+    check_wp_action.join_spin()
 
     rclpy.shutdown()
 

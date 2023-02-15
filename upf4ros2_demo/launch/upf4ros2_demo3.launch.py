@@ -31,6 +31,12 @@ def generate_launch_description():
         parameters=[points],
         output='screen')
 
+    upf4ros2_check_wp_action_cmd = Node(
+        package=pkg_name,
+        executable="upf4ros2_check_wp_action",
+        name="upf4ros2_check_wp_action",
+        output='screen')
+
     #
     # NODES
     #
@@ -44,6 +50,7 @@ def generate_launch_description():
     ld = LaunchDescription()
     ld.add_action(declare_points_cmd)
     ld.add_action(upf4ros2_navigation_action_cmd)
+    ld.add_action(upf4ros2_check_wp_action_cmd)
     ld.add_action(upf4ros2_demo_cmd)
 
     return ld
