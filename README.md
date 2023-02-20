@@ -75,8 +75,8 @@ $ bash run_tests.sh
     * `/upf4ros2/planOneShot` `[upf_msgs/action/PlanOneShot]` 
     * `/upf4ros2/planOneShotRemote` `[upf_msgs/action/PlanOneShotRemote]` 
 
-## [Demo](https://www.youtube.com/watch?v=fObz6H1DnXs)
-### Demo 1
+## Demo
+### [Demo 1](https://www.youtube.com/watch?v=fObz6H1DnXs)
 This demo consists of creating the problem from a ros2 node to navigate from living room to the entrance.
 
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
@@ -99,13 +99,22 @@ This demo consists of creating the problem from the command line. For easier use
 
 `$ ros2 launch upf4ros2_demo upf4ros2_demo1_bash.launch.py`
 
-### Demo 2
+### [Demo 2](https://www.youtube.com/watch?v=HJ46htSfPZY)
 This demo consists of creating the problem from a ros2 node to navigate from living room to the entrance.
 For run this demo I used the simulated TIAGo robot from this [repo](https://github.com/jmguerreroh/ros2_computer_vision)
 
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
 
 `$ ros2 launch upf4ros2_demo upf4ros2_demo2.launch.py`
+
+### Demo 3
+This demo consists of creating the problem from a ros2 node to navigate and check a list of waypoints starting from living room.
+For run this demo I used the simulated TIAGo robot from this [repo](https://github.com/jmguerreroh/ros2_computer_vision)
+
+`$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
+`$ ros2 launch upf4ros2_demo upf4ros2_demo3.launch.py`
+
 
 ## Acknowledgments
 

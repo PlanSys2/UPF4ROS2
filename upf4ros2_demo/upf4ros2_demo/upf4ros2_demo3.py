@@ -265,8 +265,8 @@ def main(args=None):
 
     #upf4ros2_demo_node.add_goal(robot_at(l2))
     upf4ros2_demo_node.add_goal(wp_checked(entrance))
-    upf4ros2_demo_node.add_goal(wp_checked(kitchen))
     upf4ros2_demo_node.add_goal(wp_checked(gym))
+    upf4ros2_demo_node.add_goal(wp_checked(kitchen))
 
     problem_old_upf = upf4ros2_demo_node.get_problem()
     problem_old = upf4ros2_demo_node._ros2_interface_reader.convert(problem_old_upf)
