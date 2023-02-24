@@ -9,7 +9,7 @@ from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
 from unified_planning import model
 from unified_planning import shortcuts
 from upf_msgs import msg as msgs
-from upf4ros2_demo_interfaces.srv import CallAction
+from upf4ros2_demo_msgs.srv import CallAction
 
 from upf_msgs.action import (
     PDDLPlanOneShot,
