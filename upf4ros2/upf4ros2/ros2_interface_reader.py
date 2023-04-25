@@ -30,7 +30,8 @@ from typing import (
 
 from unified_planning import Environment
 from unified_planning import model
-from unified_planning.exceptions import UPException
+from unified_planning.exceptions import UPException, UPValueError
+from unified_planning import shortcuts
 from unified_planning.model import (
     DurativeAction,
     Effect,
@@ -52,23 +53,28 @@ from upf_msgs import msg as msgs
 
 def convert_type_str(s: str, problem: Problem) -> model.types.Type:
     if s == 'up:bool':
-        return problem.env.type_manager.BoolType()
+        return problem.environment.type_manager.BoolType()
     elif s == 'up:integer':
-        return problem.env.type_manager.IntType()
+        return problem.environment.type_manager.IntType()
     elif 'up:integer[' in s:
         lb = int(s.split('[')[1].split(',')[0])
         ub = int(s.split(',')[1].split(']')[0])
-        return problem.env.type_manager.IntType(lb, ub)
+        return problem.environment.type_manager.IntType(lb, ub)
     elif s == 'up:real':
-        return problem.env.type_manager.RealType()
+        return problem.environment.type_manager.RealType()
     elif 'up:real[' in s:
-        return problem.env.type_manager.RealType(
+        return problem.environment.type_manager.RealType(
             lower_bound=fractions.Fraction(s.split('[')[1].split(',')[0]),
             upper_bound=fractions.Fraction(s.split(',')[1].split(']')[0]),
         )
     else:
         assert not s.startswith('up:'), f'Unhandled builtin type: {s}'
-        return problem.user_type(s)
+        user_type=None
+        try:
+            user_type=problem.user_type(s)
+        except UPValueError:
+            user_type=shortcuts.UserType(s)
+        return user_type
 
 
 # The operators are based on SExpressions supported in PDDL.
@@ -113,7 +119,7 @@ class ROS2InterfaceReader(Converter):
         self, msg: msgs.Parameter, problem: Problem
     ) -> model.Parameter:
         return model.Parameter(
-            msg.name, convert_type_str(msg.type, problem), problem.env
+            msg.name, convert_type_str(msg.type, problem), problem.environment
         )
 
     @handles(msgs.Fluent)
@@ -122,7 +128,7 @@ class ROS2InterfaceReader(Converter):
         sig: list = []
         for p in msg.parameters:
             sig.append(self.convert(p, problem))
-        fluent = model.Fluent(msg.name, value_type, sig, problem.env)
+        fluent = model.Fluent(msg.name, value_type, sig, problem.environment)
         return fluent
 
     @handles(msgs.ObjectDeclaration)
@@ -174,18 +180,18 @@ class ROS2InterfaceReader(Converter):
             return self.convert(root_expr.atom[0], problem)
 
         elif root_expr.kind == msgs.ExpressionItem.PARAMETER:
-            return problem.env.expression_manager.ParameterExp(
+            return problem.environment.expression_manager.ParameterExp(
                 param=Parameter(
                     root_expr.atom[0].symbol_atom[0],
-                    convert_type_str(root_expr.type, problem), problem.env
+                    convert_type_str(root_expr.type, problem), problem.environment
                 ),
             )
 
         elif root_expr.kind == msgs.ExpressionItem.VARIABLE:
-            return problem.env.expression_manager.VariableExp(
+            return problem.environment.expression_manager.VariableExp(
                 var=Variable(
                     root_expr.atom[0].symbol_atom[0],
-                    convert_type_str(root_expr.type, problem), problem.env
+                    convert_type_str(root_expr.type, problem), problem.environment
                 ),
             )
 
@@ -205,7 +211,7 @@ class ROS2InterfaceReader(Converter):
 
             args.extend([self.convert(m, problem) for m in clusters])
             if payload is not None:
-                return problem.env.expression_manager.FluentExp(payload, tuple(args))
+                return problem.environment.expression_manager.FluentExp(payload, tuple(args))
             else:
                 raise UPException(f'Unable to form fluent expression {msg}')
 
@@ -237,7 +243,7 @@ class ROS2InterfaceReader(Converter):
 
             assert node_type is not None
 
-            return problem.env.expression_manager.create_node(
+            return problem.environment.expression_manager.create_node(
                 node_type=node_type,
                 args=tuple(args),
                 payload=payload,
@@ -261,7 +267,7 @@ class ROS2InterfaceReader(Converter):
             if len(msg.expressions) > 1:
                 container = msg.expressions[2].atom[0].symbol_atom[0]
             tp = model.timing.Timepoint(kd, container)
-            return problem.env.expression_manager.TimingExp(model.Timing(0, tp))
+            return problem.environment.expression_manager.TimingExp(model.Timing(0, tp))
         raise ValueError(f'Unknown expression kind `{root_expr.kind}`')
 
     @handles(msgs.Atom)
@@ -269,19 +275,19 @@ class ROS2InterfaceReader(Converter):
         self, msg: msgs.Atom, problem: Problem
     ) -> Union[model.FNode, model.Fluent, model.Object]:
         if len(msg.int_atom) > 0:
-            return problem.env.expression_manager.Int(msg.int_atom[0])
+            return problem.environment.expression_manager.Int(msg.int_atom[0])
         elif len(msg.real_atom) > 0:
-            return problem.env.expression_manager.Real(
+            return problem.environment.expression_manager.Real(
                 fractions.Fraction(
                     msg.real_atom[0].numerator, msg.real_atom[0].denominator)
             )
         elif len(msg.boolean_atom) > 0:
-            return problem.env.expression_manager.Bool(msg.boolean_atom[0])
+            return problem.environment.expression_manager.Bool(msg.boolean_atom[0])
         elif len(msg.symbol_atom) > 0:
             # If atom symbols, return the equivalent UP alternative
             # Note that parameters are directly handled at expression level
             if problem.has_object(msg.symbol_atom[0]):
-                return problem.env.expression_manager.ObjectExp(
+                return problem.environment.expression_manager.ObjectExp(
                     obj=problem.object(msg.symbol_atom[0])
                 )
             else:
@@ -294,10 +300,10 @@ class ROS2InterfaceReader(Converter):
         self, msg: msgs.TypeDeclaration, problem: Problem
     ) -> model.Type:
         if msg.type_name == 'up:bool':
-            return problem.env.type_manager.BoolType()
+            return problem.environment.type_manager.BoolType()
         elif msg.type_name.startswith('up:integer['):
             tmp = msg.type_name.split('[')[1].split(']')[0].split(', ')
-            return problem.env.type_manager.IntType(
+            return problem.environment.type_manager.IntType(
                 lower_bound=int(tmp[0]) if tmp[0] != '-inf' else None,
                 upper_bound=int(tmp[1]) if tmp[1] != 'inf' else None,
             )
@@ -305,14 +311,14 @@ class ROS2InterfaceReader(Converter):
             tmp = msg.type_name.split('[')[1].split(']')[0].split(', ')
             lower_bound = fractions.Fraction(tmp[0]) if tmp[0] != '-inf' else None
             upper_bound = fractions.Fraction(tmp[1]) if tmp[1] != 'inf' else None
-            return problem.env.type_manager.RealType(
+            return problem.environment.type_manager.RealType(
                 lower_bound=lower_bound, upper_bound=upper_bound
             )
         else:
             father = (
                 problem.user_type(msg.parent_type) if msg.parent_type != '' else None
             )
-            return problem.env.type_manager.UserType(name=msg.type_name, father=father)
+            return problem.environment.type_manager.UserType(name=msg.type_name, father=father)
 
     @handles(msgs.Problem)
     def _convert_problem(
@@ -320,9 +326,9 @@ class ROS2InterfaceReader(Converter):
     ) -> Problem:
         problem_name = str(msg.problem_name) if str(msg.problem_name) != '' else None
         if len(msg.hierarchy) > 0:
-            problem = model.htn.HierarchicalProblem(name=problem_name, env=env)
+            problem = model.htn.HierarchicalProblem(name=problem_name, environment=env)
         else:
-            problem = Problem(name=problem_name, env=env)
+            problem = Problem(name=problem_name, environment=env)
 
         for t in msg.types:
             problem._add_user_type(self.convert(t, problem))
@@ -380,7 +386,7 @@ class ROS2InterfaceReader(Converter):
         self, msg: msgs.AbstractTaskDeclaration, problem: Problem
     ):
         return model.htn.Task(
-            msg.name, [self.convert(p, problem) for p in msg.parameters], problem.env
+            msg.name, [self.convert(p, problem) for p in msg.parameters], problem.environment
         )
 
     @handles(msgs.Task)
@@ -394,7 +400,7 @@ class ROS2InterfaceReader(Converter):
         else:
             raise ValueError(f'Unknown task name: {msg.task_name}')
         parameters = [self.convert(p, problem) for p in msg.parameters]
-        return model.htn.Subtask(task, *parameters, ident=msg.id, _env=problem.env)
+        return model.htn.Subtask(task, *parameters, ident=msg.id, _env=problem.environment)
 
     @handles(msgs.Method)
     def _convert_method(
@@ -403,7 +409,7 @@ class ROS2InterfaceReader(Converter):
         method = model.htn.Method(
             msg.name,
             [self.convert(p, problem) for p in msg.parameters],
-            problem.env,
+            problem.environment,
         )
         achieved_task_params = []
         for p in msg.achieved_task.parameters:
@@ -424,7 +430,7 @@ class ROS2InterfaceReader(Converter):
     def _convert_task_network(
         self, msg: msgs.TaskNetwork, problem: model.htn.HierarchicalProblem
     ) -> model.htn.TaskNetwork:
-        tn = model.htn.TaskNetwork(problem.env)
+        tn = model.htn.TaskNetwork(problem.environment)
         for v in msg.variables:
             tn.add_variable(v.name, convert_type_str(v.type, problem))
         for st in msg.subtasks:
@@ -733,7 +739,7 @@ class ROS2InterfaceReader(Converter):
         result: msgs.CompilerResult,
         lifted_problem: unified_planning.model.Problem,
     ) -> unified_planning.engines.CompilerResult:
-        problem = self.convert(result.problem, lifted_problem.env)
+        problem = self.convert(result.problem, lifted_problem.environment)
         mymap: Dict[
             unified_planning.model.Action,
             Tuple[unified_planning.model.Action, List[unified_planning.model.FNode]],

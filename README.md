@@ -1,4 +1,5 @@
 # UPF4ROS2
+[![main](https://github.com/PlanSys2/UPF4ROS2/actions/workflows/main.yaml/badge.svg)](https://github.com/PlanSys2/UPF4ROS2/actions/workflows/main.yaml)
 
 This repository contains a UPF TSB for ROS 2
 
@@ -73,6 +74,52 @@ $ bash run_tests.sh
     * `/upf4ros2/planOneShotPDDL` `[upf_msgs/action/PDDLPlanOneShot]` 
     * `/upf4ros2/planOneShot` `[upf_msgs/action/PlanOneShot]` 
     * `/upf4ros2/planOneShotRemote` `[upf_msgs/action/PlanOneShotRemote]` 
+
+## Demo
+### [Demo 1](https://www.youtube.com/watch?v=fObz6H1DnXs)
+This demo consists of creating the problem from a ros2 node to navigate from living room to the entrance.
+
+`$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
+`$ ros2 launch upf4ros2_demo upf4ros2_demo1.launch.py`
+
+### Demo 1 (pddl file)
+This demo consists of creating the problem from a pddl domain and problem file.
+
+`$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
+`$ ros2 launch upf4ros2_demo upf4ros2_demo1_pddlfile.launch.py`
+
+### Demo 1 (bash)
+This demo consists of creating the problem from the command line. For easier use you can use the script in /upf4ros2_demo/resource/upf_problem.sh
+
+`$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
+`$ ./upf_problem.sh`
+
+`$ ros2 launch upf4ros2_demo upf4ros2_demo1_bash.launch.py`
+
+### [Demo 2](https://www.youtube.com/watch?v=HJ46htSfPZY)
+This demo consists of creating the problem from a ROS 2 node to navigate from living room to the entrance.
+For run this demo I used the simulated TIAGo robot from this [repo](https://github.com/jmguerreroh/ros2_computer_vision)
+
+`$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
+`$ ros2 launch upf4ros2_demo upf4ros2_demo2.launch.py`
+
+### Demo 3
+This demo consists of creating the problem from a ROS 2 node to navigate and check a list of waypoints starting from living room.
+For run this demo I used the simulated TIAGo robot from this [repo](https://github.com/jmguerreroh/ros2_computer_vision)
+
+`$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
+`$ ros2 launch upf4ros2_demo upf4ros2_demo3.launch.py`
+
+There are two alternatives:
+
+* Regular case: Illustrated in this [video](https://youtu.be/2nKqxGYlHk8)
+
+* Replanning case: one of the waypoints is not reachable and it is necessary to replan. Illustrated in this [video](https://youtu.be/UJncg7GPCro)
 
 ## Acknowledgments
 
