@@ -6,15 +6,13 @@ This repository contains a fork of [UPF4ROS2](https://github.com/PlanSys2/UPF4RO
 
 ```
 $ pip install --pre unified-planning[pyperplan,tamer]
-$ cd <upf_workspace>
+$ cd <Plansys2 directory>
 $ cd src
-$ git clone https://github.com/PlanSys2/UPF4ROS2.git
+$ git clone https://github.com/OvrK12/UPF4ROS2.git
 $ vcs import . < UPF4ROS2/upf.repos
 $ cd ..
 $ colcon build --symlink-install
 ```
-
-See  for further instructions.
 
 ## Demo
 ### [Demo 1](https://www.youtube.com/watch?v=fObz6H1DnXs)
