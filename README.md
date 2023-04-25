@@ -1,6 +1,6 @@
 # UPF4ROS2
 
-This repository contains a UPF TSB for ROS 2
+This repository contains a fork of [UPF4ROS2](https://github.com/PlanSys2/UPF4ROS2) for usage in the [REAP Framework](https://github.com/OvrK12/REAP-Framework)
 
 ## Install and building
 
@@ -14,7 +14,7 @@ $ cd ..
 $ colcon build --symlink-install
 ```
 
-See [main repository](https://github.com/PlanSys2/UPF4ROS2) for further instructions.
+See  for further instructions.
 
 ## Demo
 ### [Demo 1](https://www.youtube.com/watch?v=fObz6H1DnXs)
