@@ -1,6 +1,6 @@
 # UPF4ROS2
 
-This repository contains a fork of [UPF4ROS2](https://github.com/PlanSys2/UPF4ROS2) for usage in the [REAP Framework](https://github.com/OvrK12/REAP-Framework)
+This repository contains a fork of [UPF4ROS2](https://github.com/PlanSys2/UPF4ROS2) for usage in the [REAP Framework](https://github.com/OvrK12/REAP-Framework) as described in (hopefully link to publication)
 
 ## Install and building
 
