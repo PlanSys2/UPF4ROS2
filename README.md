@@ -17,6 +17,7 @@ $ colcon build --symlink-install
 ## Demo
 In the first terminal run
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
+
 In the second terminal run
 `$ ros2 launch upf4ros2_demo traverse_areas.launch.py`
 
