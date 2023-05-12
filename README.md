@@ -19,5 +19,5 @@ This demo consists of creating the problem from a ros2 node to navigate from liv
 
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
 
-`$ ros2 launch upf4ros2_demo upf4ros2_demo1.launch.py`
+`$ ros2 launch upf4ros2_demo traverse_areas.launch.py`
 
