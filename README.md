@@ -15,9 +15,8 @@ $ colcon build --symlink-install
 ```
 
 ## Demo
-This demo consists of creating the problem from a ros2 node to navigate from living room to the entrance.
-
+In the first terminal run
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
-
+In the second terminal run
 `$ ros2 launch upf4ros2_demo traverse_areas.launch.py`
 
