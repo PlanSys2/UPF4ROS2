@@ -13,7 +13,7 @@ $ vcs import . < UPF4ROS2/upf.repos
 $ cd ..
 $ colcon build --symlink-install
 ```
-
+In src/UPF4ROS2/upf4ros2 run `sudo python3 setup.py install`. After every build, you also need to run `source install/local_setup.bash` and `source install/setup.bash`
 ## Demo
 In the first terminal run
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
