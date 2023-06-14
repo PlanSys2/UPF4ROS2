@@ -7,6 +7,7 @@ uint8 mode
 
 string domain
 string problem
+string problem_name
 
 uint8 SATISFIABLE=0
 uint8 SOLVED_OPTIMALLY=1

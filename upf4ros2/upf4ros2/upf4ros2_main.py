@@ -166,7 +166,6 @@ class UPF4ROS2Node(Node):
             response.message = f'Problem {request.problem_name} does not exist'
         else:
             problem = self.problems[request.problem_name]
-
             expression = self._ros2_interface_reader.convert(request.expression, problem)
             value = self._ros2_interface_reader.convert(request.value, problem)
             problem.set_initial_value(expression, value)
@@ -193,45 +192,6 @@ class UPF4ROS2Node(Node):
                 response.message = 'Goal is void'
         return response
     
-    def pddl_plan_one_shot(self, request, response):
-        domain_file = ''
-        problem_file = ''
-
-        if request.plan_request.mode == PDDLPlanRequest.RAW:
-            domain_file = tempfile.NamedTemporaryFile()
-            problem_file = tempfile.NamedTemporaryFile()
-
-            with open(domain_file, 'w') as pddl_writer:
-                pddl_writer.write(request.plan_request.domain)
-            with open(problem_file, 'w') as pddl_writer:
-                pddl_writer.write(request.plan_request.problem)
-        else:
-            domain_file = request.plan_request.domain
-            problem_file = request.plan_request.problem
-
-        reader = PDDLReader()
-        
-        try:
-            upf_problem = reader.parse_problem(domain_file, problem_file)
-        except Exception:
-            response.success = False
-            response.message = 'Error parsing problem'
-            return response
-
-        with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
-            result = planner.solve(upf_problem)
-            print('%s returned: %s' % (planner.name, result.plan))
-            
-            if result.plan is not None: 
-                response.plan_result = self._ros2_interface_writer.convert(result)
-                response.success = True
-                response.message = ''
-            else:
-                response.success = False
-                response.message = 'No plan found'
-
-            return response
-
     def plan_one_shot(self, request, response):
         
         upf_problem = self._ros2_interface_reader.convert(request.problem)
@@ -270,6 +230,7 @@ class UPF4ROS2Node(Node):
         
         try:
             upf_problem = reader.parse_problem(domain_file, problem_file)
+            self.problems[request.plan_request.problem_name] = upf_problem
         except Exception:
             response.success = False
             response.message = 'Error parsing problem'

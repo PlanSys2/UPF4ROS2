@@ -1,16 +1,16 @@
 (define (domain uav)
     (:types uav -object waypoint -object)
     (:predicates  
-        (at ?x0 - uav ?y0 - waypoint)
+        (at  ?x - waypoint)
         (taken_off ?x - uav)
         (landed ?x - uav)
-        (visited ?x0 - uav ?y0 - waypoint)
+        (visited ?x - waypoint)
     )
 
     (:action fly
-        :parameters (?x - uav ?y - waypoint ?z - waypoint) 
-        :precondition (and (at ?x ?y) (taken_off ?x))
-        :effect (and (not (at ?x ?y)) (at ?x ?z) (visited ?x ?z))
+        :parameters (?x - uav ?y - waypoint ?z - waypoint)
+        :precondition (and (at ?y) (taken_off ?x))
+        :effect (and (not (at ?y)) (at ?z) (visited ?z))
     )
 
     (:action take_off

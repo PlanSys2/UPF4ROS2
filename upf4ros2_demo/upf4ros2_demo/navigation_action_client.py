@@ -2,19 +2,16 @@ from typing import List
 import rclpy
 import json
 
+from rclpy.action import ActionServer
 from ament_index_python.packages import get_package_share_directory
 from geometry_msgs.msg import Pose
 from nav2_msgs.action import NavigateToPose
 from upf4ros2_demo_msgs.srv import CallAction
 from upf4ros2.ros2_interface_reader import ROS2InterfaceReader
 from upf4ros2.ros2_interface_writer import ROS2InterfaceWriter
-from unified_planning import model
-from unified_planning import shortcuts
-from upf_msgs import msg as msgs
-from upf4ros2_demo_msgs.srv import CallAction
 
-from upf_msgs.srv import (
-    SetInitialValue,
+from upf_msgs.action import (
+    PlanAction
 )
 
 from simple_node import Node
@@ -37,9 +34,6 @@ class NavigationAction(Node):
         # set initial home coordinates; overwrite later
         self._lookupTable['home'] = [0,0,0]
         self._problem_name = 'uav-test'
-
-        self._ros2_interface_writer = ROS2InterfaceWriter()
-        self._ros2_interface_reader = ROS2InterfaceReader()
         
         self.__nav_to_pose_client = self.create_action_client(
             NavigateToPose,
@@ -52,10 +46,9 @@ class NavigationAction(Node):
         self.__landing_client = self.create_action_client(
             NavigateToPose,
             '/landing')
-
+        
         self.create_service(
             CallAction, 'move', self.__execute_callback)
-
 
         
     def __execute_callback(self, request, response):
@@ -79,7 +72,6 @@ class NavigationAction(Node):
         while not self.__takeoff_client.wait_for_server():
             self.get_logger().info("'Takeoff' action server not available, waiting...")
             
-        
         while not self.__landing_client.wait_for_server():
             self.get_logger().info("'Landing' action server not available, waiting...")
         
@@ -87,6 +79,7 @@ class NavigationAction(Node):
         
         self.get_logger().info("Starting action " + request.action_name)
         
+       
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose.header.frame_id = "map"
         
@@ -141,6 +134,7 @@ class NavigationAction(Node):
                 response.result = False
         
         return response
+        
         
 
 def main(args=None):
