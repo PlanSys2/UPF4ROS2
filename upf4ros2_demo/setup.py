@@ -12,7 +12,7 @@ setup(
     data_files=[
         ('share/' + package_name, ['package.xml']),
         (os.path.join('share', package_name, 'launch'), glob('launch/*.launch.py')),
-        (os.path.join('share', package_name, 'pddl'), glob('test/pddl/*')),
+        (os.path.join('share', package_name, 'pddl'), glob('pddl/*')),
         (os.path.join("share", package_name, "params"), glob("params/*")),
     ],
     install_requires=['setuptools'],
