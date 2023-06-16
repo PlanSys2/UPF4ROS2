@@ -30,8 +30,9 @@ class FlyActionClient():
         self.result_callback = result_callback
 
     def send_action_goal(self, actionInstance, params):
-        while not self.__fly_client.wait_for_server():
-            self.logger.info("'Fly' action server not available, waiting...")
+        # not working in current state -> blocks without publishing message
+        #while not self.__fly_client.wait_for_server():
+        #    self.logger.info("'Fly' action server not available, waiting...")
         self.logger.info("Starting action 'Fly'")
         self._action = actionInstance
         self._params = params
@@ -53,20 +54,25 @@ class FlyActionClient():
         wp_pose.position.z = float(wp_resolved[2])
         
         goal_msg.pose.pose = wp_pose
-
-        self._send_goal_future = self.__fly_client.send_goal_async(goal_msg)
-        self._send_goal_future.add_done_callback(self.goal_response_callback)
+        self.logger.info("2'Fly'")
+        self._send_goal_future1 = self.__fly_client.send_goal_async(goal_msg)
+        self._send_goal_future1.add_done_callback(self.goal_response_callback)
+        self.logger.info("end 'Fly'")
 
     def goal_response_callback(self, future):
+        self.logger.info("response callback 'Fly'")
         goal_handle = future.result()
+        self.logger.info("1 response callback 'Fly'")
         if not goal_handle.accepted:
             self.logger.info('Error! Goal rejected')
             return
-
+        self.logger.info("3 response callback 'Fly'")
         self._get_result_future = goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.get_result_callback)
+        self.logger.info("4 response callback 'Fly'")
 
     def get_result_callback(self, future):
+        self.logger.info("5 'Fly'")
         self.result_callback(self._action, self._params, future.result().result)
 
     def cancel_action_goal(self):

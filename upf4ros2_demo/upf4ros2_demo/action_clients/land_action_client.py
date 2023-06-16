@@ -17,8 +17,9 @@ class LandActionClient():
         self.result_callback = result_callback
 
     def send_action_goal(self, actionInstance, params):
-        while not self.__land_client.wait_for_server():
-            self.logger.info("'Land' action server not available, waiting...")
+        # not working in current state -> blocks without publishing message
+        #while not self.__land_client.wait_for_server():
+        #    self.logger.info("'Land' action server not available, waiting...")
         self.logger.info("Starting action 'Land'")
         self._action = actionInstance
         self._params = params

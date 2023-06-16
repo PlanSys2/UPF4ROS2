@@ -42,6 +42,7 @@ from upf_msgs.srv import (
     AddObject,
     GetProblem,
     NewProblem,
+    Replan,
     SetInitialValue,
     SetProblem
 )
@@ -71,6 +72,8 @@ class UPF4ROS2Node(Node):
             'upf4ros2/action/planOneShot',
             self.plan_one_shot_callback)
 
+        self._replan_client = self.create_client(
+            Replan, 'upf4ros2/srv/replan')
         self._get_problem = self.create_service(
             GetProblem, 'upf4ros2/srv/get_problem', self.get_problem)
         self._new_problem = self.create_service(
@@ -91,6 +94,7 @@ class UPF4ROS2Node(Node):
             PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL', self.pddl_plan_one_shot)
         self._plan_one_shot_srv = self.create_service(
             PlanOneShotSrv, 'upf4ros2/srv/planOneShot', self.plan_one_shot)
+        
 
     def get_problem(self, request, response):
         if request.problem_name not in self.problems:
@@ -182,10 +186,12 @@ class UPF4ROS2Node(Node):
             if len(request.goal) > 0:
                 goal = self._ros2_interface_reader.convert(request.goal[0].goal, problem)
                 problem.add_goal(goal)
+                self.replan(request.problem_name)
                 response.success = True
             elif len(request.goal_with_cost) > 0:
                 goal = self._ros2_interface_reader.convert(request.goal_with_cost[0].goal, problem)
                 problem.add_goal(goal)
+                self.replan(request.problem_name)
                 response.success = True
             else:
                 response.success = False
@@ -301,7 +307,26 @@ class UPF4ROS2Node(Node):
             result.success = True
             result.message = ''
             return result
+    
+    def replan(self, problem_name):
+        self.get_logger().info("Entered Replan function in upf4ros main")
+        upf_problem = self.problems[problem_name]
+        generatedPlan = None
+        with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
+            result = planner.solve(upf_problem)
+            print('%s returned: %s' % (planner.name, result.plan))
+            
+            if result.plan is not None: 
+                generatedPlan = self._ros2_interface_writer.convert(result)
 
+        srv = Replan.Request()
+        srv.plan_result.plan = generatedPlan.plan
+        self.get_logger().info("2 Replan function in upf4ros main")
+        self.future = self._replan_client.call_async(srv)
+        self.get_logger().info("3 Replan function in upf4ros main")
+        # replace this with nonblocking?
+        rclpy.spin_until_future_complete(self, self.future)
+        self.get_logger().info("4 Replan function in upf4ros main")
 
 def main(args=None):
     rclpy.init(args=args)

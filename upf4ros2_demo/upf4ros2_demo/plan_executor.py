@@ -1,6 +1,9 @@
 import rclpy
+import yaml
+import json
 from rclpy.action import ActionClient
 from rclpy.node import Node
+from rosidl_runtime_py import convert as RosMsgConverter
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -19,7 +22,8 @@ from upf_msgs.action import (
 from upf_msgs.srv import (
     AddGoal,
     GetProblem,
-    SetInitialValue
+    SetInitialValue,
+    Replan
 )
 
 from upf_msgs.srv import PDDLPlanOneShot as PDDLPlanOneShotSrv
@@ -31,9 +35,11 @@ class PlanExecutorNode(Node):
         super().__init__('plan_executor')
 
         self._problem_name = 'uav_problem'
+        self._problem = None
         self._plan_result = {}
         self._actions = {}
         self._objects = {}
+        self._fluents = {}
         self._plan = []
 
         self.declare_parameter('domain', '/pddl/uav_domain.pddl')
@@ -45,7 +51,6 @@ class PlanExecutorNode(Node):
         self._ros2_interface_writer = ROS2InterfaceWriter()
         self._ros2_interface_reader = ROS2InterfaceReader()
 
-        # TODO: change first callback to feedback callback
         self._take_off_client = TakeOffActionClient(self,self.action_feedback_callback,self.finished_action_callback)
         self._land_client = LandActionClient(self,self.action_feedback_callback,self.finished_action_callback)
         self._fly_client = FlyActionClient(self,self.action_feedback_callback,self.finished_action_callback)
@@ -57,12 +62,14 @@ class PlanExecutorNode(Node):
         
         self._get_problem = self.create_client(
             GetProblem, 'upf4ros2/srv/get_problem')
-        self._add_goal = self.create_client(
-            AddGoal, 'upf4ros2/srv/add_goal')
+        #self._add_goal = self.create_client(
+        #    AddGoal, 'upf4ros2/srv/add_goal')
         self._set_initial_value = self.create_client(
             SetInitialValue, 'upf4ros2/srv/set_initial_value')
         self._plan_pddl_one_shot_client_srv = self.create_client(
             PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL')
+        self._replan = self.create_service(
+            Replan, 'upf4ros2/srv/replan', self.replan)
         
     
     def set_initial_value(self, fluent, object, value_fluent):
@@ -111,21 +118,23 @@ class PlanExecutorNode(Node):
             fluent_signature = [self._objects[paramMap[x.parameter().name]] for x in effect.fluent.args]
             value = effect.value.constant_value()
             self.set_initial_value(fluent, fluent_signature, value)
-        self.get_logger().info(str(self.get_problem()))
-    
-    def remove_goal(self, goal):
-        None
     
     def add_goal(self, goal):
-        self.get_logger().info("Updating goals")
+        None
+        """
         srv = AddGoal.Request()
         srv.problem_name = self._problem_name
         upf_goal = msgs.Goal()
         upf_goal.goal = self._ros2_interface_writer.convert(goal)
         srv.goal.append(upf_goal)
-
+        #test = RosMsgConverter.message_to_ordereddict(srv)
+        #with open('result.json', 'w') as fp:
+        #    json.dump(test, fp)
         self._add_goal.wait_for_service()
-        self.future = self._add_goal.call(srv)    
+        self.future = self._add_goal.call_async(srv)
+        rclpy.spin_until_future_complete(self, self.future)
+
+        self.get_logger().info(f'Set new goal!')"""
 
     def get_problem(self):
         """Retrieves the current state of the problem from the upf4ros problem manager
@@ -158,15 +167,17 @@ class PlanExecutorNode(Node):
         self._plan_pddl_one_shot_client_srv.wait_for_service()
         self.future = self._plan_pddl_one_shot_client_srv.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
-
         plan_result = self.future.result().plan_result
         # self.get_logger().info('Planned Steps are:' + str(plan_result.plan.actions))
-        upfProblem = self.get_problem()
-        
-        self._objects = {upfProblem.all_objects[i].name : upfProblem.all_objects[i] for i in range(len(upfProblem.all_objects))}
-        self._actions = {upfProblem.actions[i].name : upfProblem.actions[i] for i in range(len(upfProblem.actions))}
+        self._problem = self.get_problem()
+        srvProblem = self._ros2_interface_writer.convert(self._problem)
+        #test = RosMsgConverter.message_to_ordereddict(srvProblem)
+
+        self._objects = {self._problem.all_objects[i].name : self._problem.all_objects[i] for i in range(len(self._problem.all_objects))}
+        self._fluents = {self._problem.fluents[i].name : self._problem.fluents[i] for i in range(len(self._problem.fluents))}
+        self._actions = {self._problem.actions[i].name : self._problem.actions[i] for i in range(len(self._problem.actions))}
         self._plan = plan_result.plan.actions
-    
+        
     def finished_action_callback(self, action, params, result):
         self.get_logger().info("Completed action: " + action.action_name+"("+", ".join(params)+")")
         self.update_initial_state(self._actions[action.action_name], params)
@@ -175,6 +186,7 @@ class PlanExecutorNode(Node):
         # execute next action
         self.execute_plan()
 
+    # TODO: add implementation
     def action_feedback_callback(self, action, params, feedback):
         None
 
@@ -196,6 +208,22 @@ class PlanExecutorNode(Node):
         else:
             self.get_logger().info("Error! Received invalid action name")
             return
+        #self.get_logger().info('Reached end of execute plan function')
+        #self.add_goal(self._fluents['landed'](self._objects['myuav']))
+
+        
+    def replan(self, request, response):
+        self.get_logger().info("Called Replan in plan executor")
+        # cancel current actions
+        # get new plan
+        self.get_logger().info(str(self._plan))
+        self._plan = request.plan_result.plan.actions
+        self.get_logger().info(str(self._plan))
+        # start new plan
+        self.execute_plan()
+
+        response.success = True
+        return response
 
 def main(args=None):
     rclpy.init(args=args)
