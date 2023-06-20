@@ -1,9 +1,10 @@
 import rclpy
-import yaml
-import json
+
+from rclpy.task import Future
 from rclpy.action import ActionClient
 from rclpy.node import Node
 from rosidl_runtime_py import convert as RosMsgConverter
+from rclpy.executors import SingleThreadedExecutor
 
 from ament_index_python.packages import get_package_share_directory
 
@@ -41,7 +42,9 @@ class PlanExecutorNode(Node):
         self._objects = {}
         self._fluents = {}
         self._plan = []
-
+        # test code for debugging deadlocks -> remove later
+        #timer_period = 2.0
+        #timer = self.create_timer(timer_period, self.timer_callback)
         self.declare_parameter('domain', '/pddl/uav_domain.pddl')
         self.declare_parameter('problem', '/pddl/generated_uav_instance.pddl')
 
@@ -70,8 +73,11 @@ class PlanExecutorNode(Node):
             PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL')
         self._replan = self.create_service(
             Replan, 'upf4ros2/srv/replan', self.replan)
-        
     
+    # can be used to test for deadlocks -> remove this later
+    def timer_callback(self):
+        self.get_logger().info("timer_callback")
+        
     def set_initial_value(self, fluent, object, value_fluent):
         """_summary_
 
@@ -120,8 +126,11 @@ class PlanExecutorNode(Node):
             self.set_initial_value(fluent, fluent_signature, value)
     
     def add_goal(self, goal):
-        None
-        """
+        """_summary_
+
+        Args:
+            goal (_type_): _description_
+        """        
         srv = AddGoal.Request()
         srv.problem_name = self._problem_name
         upf_goal = msgs.Goal()
@@ -134,7 +143,7 @@ class PlanExecutorNode(Node):
         self.future = self._add_goal.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
-        self.get_logger().info(f'Set new goal!')"""
+        self.get_logger().info(f'Set new goal!')
 
     def get_problem(self):
         """Retrieves the current state of the problem from the upf4ros problem manager
@@ -149,7 +158,6 @@ class PlanExecutorNode(Node):
         self.future = self._get_problem.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
         problem = self._ros2_interface_reader.convert(self.future.result().problem)
-        #problem = self.future.result().problem
         return problem
     
     def get_plan_srv(self):
@@ -170,8 +178,6 @@ class PlanExecutorNode(Node):
         plan_result = self.future.result().plan_result
         # self.get_logger().info('Planned Steps are:' + str(plan_result.plan.actions))
         self._problem = self.get_problem()
-        srvProblem = self._ros2_interface_writer.convert(self._problem)
-        #test = RosMsgConverter.message_to_ordereddict(srvProblem)
 
         self._objects = {self._problem.all_objects[i].name : self._problem.all_objects[i] for i in range(len(self._problem.all_objects))}
         self._fluents = {self._problem.fluents[i].name : self._problem.fluents[i] for i in range(len(self._problem.fluents))}
@@ -179,20 +185,30 @@ class PlanExecutorNode(Node):
         self._plan = plan_result.plan.actions
         
     def finished_action_callback(self, action, params, result):
+        """_summary_
+
+        Args:
+            action (_type_): _description_
+            params (_type_): _description_
+            result (_type_): _description_
+        """        
         self.get_logger().info("Completed action: " + action.action_name+"("+", ".join(params)+")")
         self.update_initial_state(self._actions[action.action_name], params)
-
         # TODO: add error handling
-        # execute next action
-        self.execute_plan()
 
     # TODO: add implementation
     def action_feedback_callback(self, action, params, feedback):
         None
 
-    def execute_plan(self):
+    def execute_plan(self, action_finished_future, plan_finished_future):
+        """_summary_
+
+        Args:
+            future (_type_): _description_
+        """        
         if len(self._plan) == 0:
             self.get_logger().info('Plan completed!')
+            plan_finished_future.set_result("Finished")
             return
         action = self._plan.pop(0)
         actionName = action.action_name
@@ -200,39 +216,50 @@ class PlanExecutorNode(Node):
         self.get_logger().info("Next action: " + action.action_name+"("+", ".join(params)+")")
 
         if actionName == "take_off":
-            self._take_off_client.send_action_goal(action, params)
+            self._take_off_client.send_action_goal(action, params, action_finished_future)
         elif actionName == "land":
-            self._land_client.send_action_goal(action, params)
+            self._land_client.send_action_goal(action, params, action_finished_future)
         elif actionName == "fly":
-            self._fly_client.send_action_goal(action, params)
+            self._fly_client.send_action_goal(action, params, action_finished_future)
         else:
             self.get_logger().info("Error! Received invalid action name")
             return
-        #self.get_logger().info('Reached end of execute plan function')
+        #test code -> delete later
         #self.add_goal(self._fluents['landed'](self._objects['myuav']))
 
         
     def replan(self, request, response):
-        self.get_logger().info("Called Replan in plan executor")
-        # cancel current actions
+        """_summary_
+
+        Args:
+            request (_type_): _description_
+            response (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """        
+        self.get_logger().info("Replanning: ")
+        # TODO: cancel current actions
         # get new plan
-        self.get_logger().info(str(self._plan))
         self._plan = request.plan_result.plan.actions
-        self.get_logger().info(str(self._plan))
-        # start new plan
-        self.execute_plan()
+        self.get_logger().info("New plan: " + str(self._plan))
+        # start new plan -> don't call execute plan here (called in main loop instead)
 
         response.success = True
         return response
 
 def main(args=None):
     rclpy.init(args=args)
+    ste = SingleThreadedExecutor()
     plan_executor_node = PlanExecutorNode()
-
-    plan_executor_node.get_plan_srv()
-    plan_executor_node.execute_plan()
-    rclpy.spin(plan_executor_node)
-
+    plan_executor_node.get_plan_srv()    
+    
+    plan_finished_future = Future(executor=ste)
+    while plan_finished_future.done() == False:
+        action_finished_future = Future(executor=ste)
+        plan_executor_node.execute_plan(action_finished_future,plan_finished_future)
+        rclpy.spin_until_future_complete(plan_executor_node,action_finished_future,ste)
+        
     plan_executor_node.destroy_node()
     rclpy.shutdown()
 

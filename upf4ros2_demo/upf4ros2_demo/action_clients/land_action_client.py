@@ -1,5 +1,4 @@
 from rclpy import logging
-
 from rclpy.action import ActionClient
 from nav2_msgs.action import NavigateToPose
 
@@ -15,14 +14,15 @@ class LandActionClient():
         # TODO: add feedback callback
         self.feedback_callback = feedback_callback
         self.result_callback = result_callback
+        self.future_handle = None
 
-    def send_action_goal(self, actionInstance, params):
+    def send_action_goal(self, actionInstance, params, future):
         # not working in current state -> blocks without publishing message
         #while not self.__land_client.wait_for_server():
         #    self.logger.info("'Land' action server not available, waiting...")
-        self.logger.info("Starting action 'Land'")
         self._action = actionInstance
         self._params = params
+        self.future_handle = future
 
         goal_msg = NavigateToPose.Goal()
         goal_msg.pose.header.frame_id = "map"
@@ -42,6 +42,7 @@ class LandActionClient():
 
     def get_result_callback(self, future):
         self.result_callback(self._action, self._params, future.result().result)
+        self.future_handle.set_result("Finished")
 
     def cancel_action_goal(self):
         None
