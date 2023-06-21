@@ -31,4 +31,3 @@ class FlyActionClient(CustomActionClient):
         wp_pose.position.z = float(wp_resolved[2])
         goal_msg.pose.pose = wp_pose
         return goal_msg
-

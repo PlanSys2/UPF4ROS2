@@ -37,11 +37,11 @@ class PlanExecutorNode(Node):
 
         self._problem_name = 'uav_problem'
         self._problem = None
-        self._plan_result = {}
         self._actions = {}
         self._objects = {}
         self._fluents = {}
         self._plan = []
+        self._current_action_future = None
         # test code for debugging deadlocks -> remove later
         #timer_period = 2.0
         #timer = self.create_timer(timer_period, self.timer_callback)
@@ -57,6 +57,7 @@ class PlanExecutorNode(Node):
         self._take_off_client = TakeOffActionClient(self,self.action_feedback_callback,self.finished_action_callback)
         self._land_client = LandActionClient(self,self.action_feedback_callback,self.finished_action_callback)
         self._fly_client = FlyActionClient(self,self.action_feedback_callback,self.finished_action_callback)
+        self._current_action_client = None
 
         self._plan_pddl_one_shot_client = ActionClient(
             self, 
@@ -205,11 +206,12 @@ class PlanExecutorNode(Node):
 
         Args:
             future (_type_): _description_
-        """        
+        """
         if len(self._plan) == 0:
             self.get_logger().info('Plan completed!')
             plan_finished_future.set_result("Finished")
             return
+        self._current_action_future = action_finished_future
         action = self._plan.pop(0)
         actionName = action.action_name
         params = [x.symbol_atom[0] for x in action.parameters]
@@ -217,10 +219,13 @@ class PlanExecutorNode(Node):
 
         if actionName == "take_off":
             self._take_off_client.send_action_goal(action, params, action_finished_future)
+            self._current_action_client = self._take_off_client
         elif actionName == "land":
             self._land_client.send_action_goal(action, params, action_finished_future)
+            self._current_action_client = self._land_client
         elif actionName == "fly":
             self._fly_client.send_action_goal(action, params, action_finished_future)
+            self._current_action_client = self._fly_client
         else:
             self.get_logger().info("Error! Received invalid action name")
             return
@@ -239,12 +244,16 @@ class PlanExecutorNode(Node):
             _type_: _description_
         """        
         self.get_logger().info("Replanning: ")
-        # TODO: cancel current actions
+        # cancel current action
+        if self._current_action_client != None:
+            # TODO: add error handling
+            self._current_action_client.cancel_action_goal()
+            self.get_logger().info("Successfully canceled actions")
         # get new plan
         self._plan = request.plan_result.plan.actions
         self.get_logger().info("New plan: " + str(self._plan))
         # start new plan -> don't call execute plan here (called in main loop instead)
-
+        self._current_action_future.set_result("Finished")
         response.success = True
         return response
 
