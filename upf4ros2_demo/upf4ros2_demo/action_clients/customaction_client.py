@@ -16,9 +16,12 @@ class CustomActionClient:
         self.__action_client=ActionClient(node, NavigateToPose, ros_action_name)#ARG
         self._action = None
         self._params = []
+        self._goal_handle = None
+
         self.feedback_callback = feedback_callback
         self.result_callback = result_callback
         self.future_handle = None
+        
 
         
     
@@ -32,8 +35,8 @@ class CustomActionClient:
         
         goal_msg=self.create_goalmsg(goal_msg)
     
-        self._send_goal_future1 = self.__action_client.send_goal_async(goal_msg)
-        self._send_goal_future1.add_done_callback(self.goal_response_callback)
+        self._send_goal_future = self.__action_client.send_goal_async(goal_msg)
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
 
 
     def create_goalmsg(self, goal_msg):
@@ -41,11 +44,11 @@ class CustomActionClient:
 
         
     def goal_response_callback(self, future):
-        goal_handle = future.result()
-        if not goal_handle.accepted:
+        self._goal_handle = future.result()
+        if not self._goal_handle.accepted:
             self.logger.info('Error! Goal rejected')
             return
-        self._get_result_future = goal_handle.get_result_async()
+        self._get_result_future = self._goal_handle.get_result_async()
         self._get_result_future.add_done_callback(self.get_result_callback)
         
     def get_result_callback(self, future):
@@ -53,4 +56,8 @@ class CustomActionClient:
         self.future_handle.set_result("Finished")
 
     def cancel_action_goal(self):
-        None
+        self.logger.info('Cancelling goal')
+        try:
+            self._goal_handle.cancel_goal()
+        except:
+            self.logger.info('Error! No valid goal handle')
