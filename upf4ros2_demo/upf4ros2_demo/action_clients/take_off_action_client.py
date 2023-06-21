@@ -1,6 +1,3 @@
-from rclpy import logging
-from rclpy.action import ActionClient
-from nav2_msgs.action import NavigateToPose
 from upf4ros2_demo.action_clients.customaction_client  import CustomActionClient
 
 

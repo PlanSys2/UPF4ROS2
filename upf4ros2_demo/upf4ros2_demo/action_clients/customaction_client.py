@@ -1,12 +1,6 @@
-import json
 from rclpy import logging
 from rclpy.action import ActionClient
-from ament_index_python.packages import get_package_share_directory
-
-
 from nav2_msgs.action import NavigateToPose
-from geometry_msgs.msg import Pose
-
 
 class CustomActionClient:
 
@@ -32,8 +26,8 @@ class CustomActionClient:
         
         goal_msg=self.create_goalmsg(goal_msg)
     
-        self._send_goal_future1 = self.__action_client.send_goal_async(goal_msg)
-        self._send_goal_future1.add_done_callback(self.goal_response_callback)
+        self._send_goal_future = self.__action_client.send_goal_async(goal_msg)
+        self._send_goal_future.add_done_callback(self.goal_response_callback)
 
 
     def create_goalmsg(self, goal_msg):

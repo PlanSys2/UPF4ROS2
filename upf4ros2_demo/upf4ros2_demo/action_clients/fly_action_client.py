@@ -1,10 +1,5 @@
 import json
-from rclpy import logging
-from rclpy.action import ActionClient
 from ament_index_python.packages import get_package_share_directory
-
-
-from nav2_msgs.action import NavigateToPose
 from geometry_msgs.msg import Pose
 from upf4ros2_demo.action_clients.customaction_client import CustomActionClient
 
