@@ -1,0 +1,5 @@
+int32[] init_status
+---
+int32[] final_status
+---
+bool is_finished

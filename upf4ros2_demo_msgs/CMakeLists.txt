@@ -14,6 +14,7 @@ find_package(upf_msgs REQUIRED)
 # find_package(<dependency> REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
+  "action/Mission.action"
   "srv/CallAction.srv"
   DEPENDENCIES upf_msgs
 )

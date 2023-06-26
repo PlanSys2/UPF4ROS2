@@ -23,6 +23,7 @@ setup(
     entry_points={
         'console_scripts': [
             'plan_executor = upf4ros2_demo.plan_executor:main',
+            'roswrap = upf4ros2_demo.sg_roswrap:main',
             'navigation_action_client = upf4ros2_demo.navigation_action_client:main',
         ],
     },

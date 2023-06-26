@@ -13,6 +13,8 @@
   <test_depend>ament_lint_common</test_depend>
   <build_depend>rosidl_default_generators</build_depend>
   <depend>upf_msgs</depend>
+  
+  <depend>actions_msgs</depend>
 
   <exec_depend>rosidl_default_runtime</exec_depend>
 
