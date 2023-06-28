@@ -28,7 +28,7 @@ from std_msgs.msg import Bool
 class GameROSWrapper(Node):
 
     def __init__(self):
-        super().__init__('plan_executor')
+        super().__init__('game_manager')
         tmp_zeros = np.zeros((2, 4))
         mobis = MonitorSG(2, 4,
                       [[0, 0, 0, 0], [1, 1, 1, 1]],
