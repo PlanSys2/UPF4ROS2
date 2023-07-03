@@ -13,21 +13,6 @@ import rclpy
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 
 
-
-#path_to_folder="layers_custom/"
-
-#lidar_layer=QgsPointCloudLayer("/home/pjourdan/qt_ws/layers_custom/PTS_LAMB93_IGN69_0925_6326.las","lidar", "pdal")
-# zone_layer=QgsVectorLayer("/home/pjourdan/qt_ws/layers_custom/testzone.shp","monitoringZone", "ogr")
-# zone_layer.loadNamedStyle('/home/pjourdan/qt_ws/style/zoneProbaGradua.qml')
-#/home/companion/PlanSys/src/UPF4ROS2/upf4ros2_demo/upf4ros2_demo/
-
-
-# if not lidar_layer.isValid():
-    # print("Cloud Layer failed to load!")
-# else:
-    # QgsProject.instance().addMapLayer(lidar_layer)
-
-
 def add_layer_toproject(layer,namety):
     if not layer.isValid():
         print(f"{namety} Layer failed to load!")
@@ -62,9 +47,6 @@ def gen_zonelayer():
 def gen_dronelayer():
     drone_layers = QgsVectorLayer("Point?crs=EPSG:4326", "temporary_points", "memory")
     pr = drone_layers.dataProvider()
-    #drone_layers.startEditing()
-    #print (QDateTime(2023, 5, 9, 17, 18, 58, 940))
-
     pr.addAttributes( [ QgsField("drone", QVariant.String),
                     QgsField("X",  QVariant.Int),
                     QgsField("Y",  QVariant.Int),
@@ -148,95 +130,13 @@ class CustomWind(QMainWindow):
         self.toolbar.addAction(self.actionPushBut)
         self.toolPan.setAction(self.actionPushBut)
         
-        self.actionPushButbis = QAction("replace data", self)
+        self.actionPushButbis = QAction("Refresh Data", self)
         self.actionPushButbis.setCheckable(False)
-        self.actionPushButbis.triggered.connect(self.replace_push)
+        self.actionPushButbis.triggered.connect(self.refresh)
         self.toolbar.addAction(self.actionPushButbis)
         self.toolPan.setAction(self.actionPushButbis)
         
-        self.actionPushDelRep = QAction("Del/Rep", self)
-        self.actionPushDelRep.setCheckable(False)
-        self.actionPushDelRep.triggered.connect(self.delrep_push)
-        self.toolbar.addAction(self.actionPushDelRep)
-        self.toolPan.setAction(self.actionPushDelRep)
         
-        
-        
-        # self.push_button = QPushButton("Click me!")
-        # self.push_button.clicked.connect(self.f)
-        
-        
-        
-    def del_push(self):
-        drone_lay=self.layers[0]
-        drone_lay.startEditing()
-        for feat in drone_lay.getFeatures():
-            drone_lay.deleteFeature(feat.id())
-        drone_lay.commitChanges()
-        path_lay=self.layers[1]
-        path_lay.startEditing()
-        for feat in path_lay.getFeatures():
-            path_lay.deleteFeature(feat.id())
-        path_lay.commitChanges()
-        return
-               
-    def replace_push(self):
-        drone_lay=self.layers[0]
-        pr = drone_lay.dataProvider()
-        drone_lay.startEditing()
-        pr.addAttributes( [ QgsField("drone", QVariant.String),
-                    QgsField("X",  QVariant.Int),
-                    QgsField("Y",  QVariant.Int),
-                   QgsField("date",QVariant.DateTime) ] )
-                   
-                   
-        data_sim=pd.read_csv("/home/companion/PlanSys/testdataPosi.csv")
-        select_d1=data_sim.loc[data_sim['drone'] == 'd1']
-        for index,row in select_d1.iterrows():
-            formatted = datetime.datetime.strptime(row["datetime"],'%Y-%m-%d %H:%M:%S.%f')
-            newdatebis=QDateTime(formatted.year, formatted.month, formatted.day, formatted.hour, formatted.minute, formatted.second)
-            fet = QgsFeature()
-            fet.setAttributes([row['drone'],row['x'],row['y'],newdatebis])
-            fet.setGeometry( QgsGeometry.fromPointXY(QgsPointXY(row['x'],row['y'])) )
-            pr.addFeatures( [ fet ] )               
-
-        # Commit changes
-        drone_lay.commitChanges()
-        return
-        
-    def delrep_push(self):
-        drone_lay=self.layers[0]
-        pr = drone_lay.dataProvider()
-        drone_lay.startEditing()
-        for feat in drone_lay.getFeatures():
-            drone_lay.deleteFeature(feat.id())
-        pr.addAttributes( [ QgsField("drone", QVariant.String),
-                    QgsField("X",  QVariant.Int),
-                    QgsField("Y",  QVariant.Int),
-                   QgsField("date",QVariant.DateTime) ] )
-                   
-                   
-        data_sim=pd.read_csv("/home/companion/PlanSys/testdataPosi.csv")
-        select_d1=data_sim.loc[data_sim['drone'] == 'd1']
-        for index,row in select_d1.iterrows():
-            formatted = datetime.datetime.strptime(row["datetime"],'%Y-%m-%d %H:%M:%S.%f')
-            newdatebis=QDateTime(formatted.year, formatted.month, formatted.day, formatted.hour, formatted.minute, formatted.second)
-            fet = QgsFeature()
-            fet.setAttributes([row['drone'],row['x'],row['y'],newdatebis])
-            fet.setGeometry( QgsGeometry.fromPointXY(QgsPointXY(row['x'],row['y'])) )
-            pr.addFeatures( [ fet ] )       
-        drone_lay.commitChanges()
-               
-              
-    # Refresh = add without any duplicate  
-               
-
-
-
-class CustomWindBis(CustomWind):
-
-    def __init__(self,layers):
-        super().__init__(layers)
         self.actionShowlayer = QAction("Hide Drone", self)
         self.actionShowlayer.setCheckable(True)
         self.actionShowlayer.triggered.connect(self.show_hide)
@@ -255,34 +155,30 @@ class CustomWindBis(CustomWind):
         self.timer = QTimer()
         self.timer.timeout.connect(self.refresh)
         self.timer.start(15001)
-        
+    
+    
+    def del_push(self):
+        drone_lay=self.layers[0]
+        drone_lay.startEditing()
+        for feat in drone_lay.getFeatures():
+            drone_lay.deleteFeature(feat.id())
+        drone_lay.commitChanges()
+        path_lay=self.layers[1]
+        path_lay.startEditing()
+        for feat in path_lay.getFeatures():
+            path_lay.deleteFeature(feat.id())
+        path_lay.commitChanges()
+        return
+    
+    
     def refresh(self):
         data_sim=pd.read_csv("/home/companion/PlanSys/testdataPosi.csv")
         select_d1=data_sim.loc[data_sim['drone'] == 'd1']
         drone_lay=self.layers[0]
         path_lay=self.layers[1]
-        # drone_lay.startEditing()
-        # #select_d1.iloc[self.current_data_index:].iterrows()# with self.current_data_index=0
-        # init_index=self.current_data_index
-        # for index,row in select_d1.iloc[self.current_data_index:].iterrows():
-            # #if index>init_index:
-            # formatted = datetime.datetime.strptime(row["datetime"],'%Y-%m-%d %H:%M:%S.%f')
-            # newdatebis=QDateTime(formatted.year, formatted.month, formatted.day, formatted.hour, formatted.minute, formatted.second)
-            # fet = QgsFeature()
-            # fet.setAttributes([row['drone'],row['x'],row['y'],newdatebis])
-            # fet.setGeometry( QgsGeometry.fromPointXY(QgsPointXY(row['x'],row['y'])) )
-            # drone_lay.addFeature(fet)
-            # init_index=index
-        # # Commit changes
-        # drone_lay.commitChanges()
-        
         drone_lay.startEditing()
         path_lay.startEditing()
-        # data_sim=pd.read_csv("/home/companion/PlanSys/testdataPosi.csv")
-        # select_d1=data_sim.loc[data_sim['drone'] == 'd1']
         select_d1.sort_values(by='datetime', inplace = True)
-        # start_row=0
-        # nb_row=select_d1.shape[0]
         for i in range(self.current_data_index,select_d1.shape[0]-1):
             starpoint=select_d1.iloc[i]
             endpoint=select_d1.iloc[i+1]
@@ -298,6 +194,7 @@ class CustomWindBis(CustomWind):
             fet.setAttributes([endpoint['drone'],endpoint['x'],endpoint['y'],dateend])
             fet.setGeometry( QgsGeometry.fromPointXY(QgsPointXY(endpoint['x'],endpoint['y'])) )
             drone_lay.addFeature(fet)
+        self.current_data_index=select_d1.shape[0]-2
         path_lay.commitChanges()
         drone_lay.commitChanges()
         self.timer.start(15001)
@@ -328,19 +225,9 @@ class CustomWindBis(CustomWind):
             tmp_layers=self.canvas.layers()
             tmp_layers.remove(self.layers[1])
             self.canvas.setLayers(tmp_layers)
-    
-    def delrep_push(self):
-        return 0
- 
-
-
-
-
+       
 
         
-        
-
-
 
 
 def main(args=None):
@@ -397,18 +284,19 @@ qgs = QgsApplication([], False)
 qgs.initQgis()
 QgsApplication.setPrefixPath("/usr/", True)
 
-lidar_layer_out=gen_lidarlayer()
+#lidar_layer_out=gen_lidarlayer()
 zone_layer_out=gen_zonelayer()
 drone_layer_out=gen_dronelayer()
 path_layer_out=gen_pathlayer()
 
 
-add_layer_toproject(lidar_layer_out,"Cloud")
+#add_layer_toproject(lidar_layer_out,"Cloud")
 add_layer_toproject(zone_layer_out,"Vectorzone")
 add_layer_toproject(path_layer_out,"VectorLine")
 add_layer_toproject(drone_layer_out,"VectorPoint")
 
-cuswin=CustomWindBis([drone_layer_out,path_layer_out,zone_layer_out,lidar_layer_out])
+# cuswin=CustomWind([drone_layer_out,path_layer_out,zone_layer_out,lidar_layer_out])
+cuswin=CustomWind([drone_layer_out,path_layer_out,zone_layer_out])
 cuswin.show()
 
 qgs.exit()
