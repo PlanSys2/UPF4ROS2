@@ -14,6 +14,12 @@ $ cd ..
 $ colcon build --symlink-install
 ```
 In src/UPF4ROS2/upf4ros2 run `sudo python3 setup.py install`. After every build, you also need to run `source install/local_setup.bash` and `source install/setup.bash`
+
+For the implementation of stochastic games, two python library are necessary. 
+Clone the following project [gtnash](https://forgemia.inra.fr/game-theory-tools-group/gtnash) and [protosg](https://forgemia.inra.fr/pauljourdan22/protoSG) and install each library with:
+
+`$ pip install -e .` ( where `setup.py` is located for each of the cloned project)
+
 ## Demo
 In the first terminal run
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
@@ -21,3 +27,5 @@ In the first terminal run
 In the second terminal run
 `$ ros2 launch upf4ros2_demo traverse_areas.launch.py`
 
+In the third terminal run
+`$ ros2 launch upf4ros2_demo roswrap.launch.py`
