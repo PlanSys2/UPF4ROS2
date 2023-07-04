@@ -20,6 +20,9 @@ Clone the following project [gtnash](https://forgemia.inra.fr/game-theory-tools-
 
 `$ pip install -e .` ( where `setup.py` is located for each of the cloned project)
 
+For the GUI to work properly, Qgis (pyqgis) is necessary, the installation instruction are available [here](https://www.qgis.org/en/site/forusers/alldownloads.html#linux)
+
+
 ## Demo
 In the first terminal run
 `$ ros2 launch upf4ros2 upf4ros2.launch.py`
