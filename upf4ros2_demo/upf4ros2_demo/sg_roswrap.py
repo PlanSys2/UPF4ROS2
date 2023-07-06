@@ -45,45 +45,24 @@ class GameROSWrapper(Node):
         self.get_logger().info(f"{os.getcwd()}")
         self.df=pd.DataFrame([],columns=["drone","x","y","datetime"])
         self.df.to_csv("testdataPosi.csv")
-#        self.status_sub = self.create_subscription(
-#            VehicleStatus,
-#            '/fmu/vehicle_status/out',
-#            self.listener_callback,
-#            10)
-        #Subscription TOPIC: POSITION
-        self.local_pos_sub = self.create_subscription(
-            VehicleGlobalPosition,
-            '/fmu/vehicle_global_position/out',
-            self.listener_callbackbis,
-            100)
-        #TEST SUBSCRIPTION
-#        self.subscription= self.create_subscription(String,'fmu/trajectory_setpoint/in',self.listener_callback,10)
-#        self.subscription
-#        self.success_sub=self.create_subscription(String,'MissionSuccess',self.launch_newgame,10)
-        #TEST PUBLISHER
-        #self.newgame_pub=self.create_publisher(String, 'NewMission', 10)
-        #TEST ACTION
+        # self.local_pos_sub = self.create_subscription(
+            # VehicleGlobalPosition,
+            # '/fmu/vehicle_global_position/out',
+            # self.listener_callbackbis,
+            # 100)
         self.action_client_mission=ActionClient(self, Mission, 'mission')
-        #self.current_status=[1,1,1,1]
-        #TEST SERVICES
-        #self.client_mission=self.create_client(CallMission, 'call_mission')
-        #while not self.client_mission.wait_for_service(timeout_sec=1.0):
-        #    self.get_logger().info('service not available, waiting again...')
-        #self.req_cus=CallMission.Request()
-        #self.sub_endedmission=self.create_subscription(Bool, 'MissionEnded', self.relaunch_callback, 10)
+       
+    
+    # def listener_callbackbis(self, msg):
+        # if msg.timestamp-self.oldtime>5000000: #10 second: 10000000:
+            # current_time=datetime.datetime.now()
+            # tmpdf= pd.DataFrame({"drone":["d1"],"x":[msg.lon],'y':[msg.lat],"datetime":[current_time]})
+            # tmpdf.to_csv('testdataPosi.csv', mode='a',header=False)
+            # self.oldtime=msg.timestamp
+            # self.get_logger().info(f"{msg.timestamp}")
+            # self.get_logger().info(f"Longitude:{msg.lon},Latitude:{msg.lat}")
 
-#    def listener_callback(self, msg):
-#        self.get_logger().info("testsub1")
-
-    #Listener for TOPIC POSITION
-    def listener_callbackbis(self, msg):
-        if msg.timestamp-self.oldtime>5000000: #10 second: 10000000:
-            current_time=datetime.datetime.now()
-            tmpdf= pd.DataFrame({"drone":["d1"],"x":[msg.lon],'y':[msg.lat],"datetime":[current_time]})
-            tmpdf.to_csv('testdataPosi.csv', mode='a',header=False)
-            self.oldtime=msg.timestamp
-            self.get_logger().info(f"{msg.timestamp}")
-            self.get_logger().info(f"Longitude:{msg.lon},Latitude:{msg.lat}")
+    
 
     #Game solver: default
     def solvegame(self):
@@ -105,8 +84,6 @@ class GameROSWrapper(Node):
         msgbis.data="GameFinishReload"
         self.newgame_pub.publish(msgbis)
         
-    #def relaunch_callback(self,msg):
-    #    msg.data
         
     #Action launcher with status as arg
     def launch_game(self,init_status):
@@ -171,19 +148,11 @@ def main(args=None):
                       )
     rclpy.init()
     gamenode=GameROSWrapper()
-
     gamenode.solvegame()
-    #response=gamenode.send_request((1,1,1,1))
-    #gamenode.get_logger().info(f"{response}")
     gamenode.get_logger().info("Test1")
-    #msgbis=String()
-    #msgbis.data="GameFinishReload"
-    #time.sleep(10) 
-    #gamenode.newgame_pub.publish(msgbis)
     status=[0,0,0,1]
     gamenode.launch_game(status)
     gamenode.get_logger().info(f"Test order")
-    #gamenode.get_logger().info(f"New status={gamenode.current_status}")
     rclpy.spin(gamenode)
     gamenode.get_logger().info("Test2")
 
@@ -193,33 +162,3 @@ def main(args=None):
 
 if __name__ == "__main__":
     main()
-
-# #########################
-#     rclpy.init(args=args)
-#     upf4ros2_demo_node = UPF4ROS2DemoNode()
-#
-#     upf4ros2_demo_node.get_plan_srv()
-#     rclpy.spin(upf4ros2_demo_node)
-#
-#     upf4ros2_demo_node.destroy_node()
-#     rclpy.shutdown()
-#
-# #########################
-#
-#     rclpy.init(args=args)
-#
-#     navigation_action = NavigationAction()
-#
-#     navigation_action.join_spin()
-#
-#     rclpy.shutdown()
-
-
-
-    # game_var=rospy.set_param("/game",mobis)
-    # rospy.init_node("game_solver")
-    #
-    # gamesolver=GameROSWrapper()
-    #
-    # rospy.loginfo("start OK")
-    # rospy.spin()

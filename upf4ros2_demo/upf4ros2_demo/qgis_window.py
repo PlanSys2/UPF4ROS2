@@ -11,6 +11,14 @@ import datetime
 from rclpy.node import Node
 import rclpy
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
+from threading import Thread
+
+from px4_msgs.msg import OffboardControlMode
+from px4_msgs.msg import TrajectorySetpoint
+from px4_msgs.msg import VehicleStatus
+from px4_msgs.msg import VehicleLocalPosition
+from px4_msgs.msg import VehicleGlobalPosition
+from std_msgs.msg import String
 
 
 def add_layer_toproject(layer,namety):
@@ -20,7 +28,6 @@ def add_layer_toproject(layer,namety):
     else:
         QgsProject.instance().addMapLayer(layer)
         #node.get_logger().info("ok load")
-
 
 def gen_lidarlayer():
     lidar_layer=QgsPointCloudLayer("/home/companion/PlanSys/src/UPF4ROS2/upf4ros2_demo/upf4ros2_demo/layers_custom/PTS_LAMB93_IGN69_0925_6326.las","lidar", "pdal")
@@ -105,21 +112,52 @@ def gen_pathlayer():
     return path_layers
 
 
+
+
+class CollectorNode(Node):
+
+    def __init__(self):
+        super().__init__('qgis_gui')
+        self.local_pos_sub = self.create_subscription(VehicleGlobalPosition,'/fmu/vehicle_global_position/out', self.listener_callback_pos,10)
+        self.oldtime=0
+        self.df=pd.DataFrame([],columns=["drone","x","y","datetime"])
+        self.local_pos_sub
+        # self.subscri = self.create_subscription(String,'topic', self.listener_callback,10)
+        # self.subscri
+        
+        
+    def listener_callback_pos(self, msg):
+        if msg.timestamp-self.oldtime>5000000: #10 second: 10000000:
+            current_time=datetime.datetime.now()
+            self.df.loc[len(self.df.index)]=["d1",msg.lon,msg.lat,str(current_time)]
+            self.oldtime=msg.timestamp
+            self.get_logger().info(f"{self.df}")
+            self.get_logger().info(f"{msg.timestamp}")
+            self.get_logger().info(f"Longitude:{msg.lon},Latitude:{msg.lat}")
+
+    # def listener_callback(self,msg):
+        # self.get_logger().info(f"I heard: {msg.data}")
+ 
  
                
 class CustomWind(QMainWindow):
     def __init__(self,layers):
         QMainWindow.__init__(self)
         self.canvas = QgsMapCanvas()
-        self.temporal_controller = QgsTemporalControllerWidget()
-        self.canvas.setTemporalController(self.temporal_controller.temporalController())
+        self.temporal_controller_widg = QgsTemporalControllerWidget()
+        self.canvas.setTemporalController(self.temporal_controller_widg.temporalController())
+        
+        self.executor=SingleThreadedExecutor()
+        self.node=CollectorNode()#Node("qt_gui")#CollectorNode()
+        self.executor.add_node(self.node)
+        
         
         self.layers=layers
         self.canvas.setDestinationCrs(layers[-1].crs())
         self.canvas.setExtent(layers[-1].extent())
         self.canvas.setLayers(layers)
         self.setCentralWidget(self.canvas)
-        self.setMenuWidget(self.temporal_controller)
+        self.setMenuWidget(self.temporal_controller_widg)
         temporalController = self.canvas.temporalController()
         self.toolbar = self.addToolBar("Canvas actions")
         self.toolPan = QgsMapToolPan(self.canvas)
@@ -155,6 +193,7 @@ class CustomWind(QMainWindow):
         self.timer = QTimer()
         self.timer.timeout.connect(self.refresh)
         self.timer.start(15001)
+        self.thread=Thread(target=self.executor.spin)
     
     
     def del_push(self):
@@ -172,10 +211,23 @@ class CustomWind(QMainWindow):
     
     
     def refresh(self):
-        data_sim=pd.read_csv("/home/companion/PlanSys/testdataPosi.csv")
-        select_d1=data_sim.loc[data_sim['drone'] == 'd1']
+        # data_sim=pd.read_csv("/home/companion/PlanSys/testdataPosi.csv")
+        # select_d1=data_sim.loc[data_sim['drone'] == 'd1']
+        select_d1=self.node.df.loc[self.node.df['drone'] == 'd1']
         drone_lay=self.layers[0]
+        drone_lay.dataProvider().addAttributes( [ QgsField("drone", QVariant.String),
+                        QgsField("X",  QVariant.Int),
+                        QgsField("Y",  QVariant.Int),
+                       QgsField("date",QVariant.DateTime) ] ) 
         path_lay=self.layers[1]
+        path_lay.dataProvider().addAttributes( [ QgsField("drone", QVariant.String),
+                    QgsField("X1",  QVariant.Int),
+                    QgsField("Y1",  QVariant.Int),
+                    QgsField("date1",QVariant.DateTime),
+                    QgsField("X2",  QVariant.Int),
+                    QgsField("Y2",  QVariant.Int),
+                   QgsField("date2",QVariant.DateTime) ] )
+        
         drone_lay.startEditing()
         path_lay.startEditing()
         select_d1.sort_values(by='datetime', inplace = True)
@@ -186,6 +238,7 @@ class CustomWind(QMainWindow):
             formatted_end = datetime.datetime.strptime(endpoint["datetime"],'%Y-%m-%d %H:%M:%S.%f')
             datestart=QDateTime(formatted_start.year, formatted_start.month, formatted_start.day, formatted_start.hour, formatted_start.minute, formatted_start.second)
             dateend=QDateTime(formatted_end.year, formatted_end.month, formatted_end.day, formatted_end.hour, formatted_end.minute, formatted_end.second)
+            #self.node.get_logger().info(f"{dateend}")
             fet = QgsFeature()
             fet.setGeometry(QgsGeometry.fromPolylineXY([QgsPointXY(starpoint['x'],starpoint['y']), QgsPointXY(endpoint['x'],endpoint['y'])]))
             fet.setAttributes([starpoint['drone'], starpoint['x'], starpoint['y'], datestart, endpoint['x'], endpoint['y'], dateend])
@@ -227,77 +280,32 @@ class CustomWind(QMainWindow):
             self.canvas.setLayers(tmp_layers)
        
 
-        
-
-
 def main(args=None):
     rclpy.init()
-    qtwindow_node=WindowQgis()
-    #executor = SingleThreadedExecutor()
-    #executor.add_node(qtwindow_node)
-    qgs = QgsApplication([], False)
-    qgs.initQgis()
     QgsApplication.setPrefixPath("/usr/", True)
-
-    #lidar_layer=gen_lidarlayer()
-    #zone_layer=gen_zonelayer()
-    #drone_layers=gen_dronelayer()
-
-
-    #add_layer_toproject(lidar_layer,"Cloud")
-    #add_layer_toproject(zone_layer,"Vectorzone")
-    #add_layer_toproject(drone_layers,"VectorPoint")
-
-
-
-    #cusw=CustomWind([drone_layers,zone_layer,lidar_layer],)
+    qgs=QgsApplication([],False)
+    qgs.initQgis()
     
-    window = QMainWindow()
-    window.setWindowTitle("TestWindow")
-    window.setStyleSheet("background-color: yellow;")
-    window.show()
-    
-    
-    print("Test0")
-    #cusw.show()
-    #cuw2=CustomWind2()
-    #cuw2.show()
-    #import sys
-    print(sys.path)
+    #lidar_layer_out=gen_lidarlayer()
+    zone_layer_out=gen_zonelayer()
+    drone_layer_out=gen_dronelayer()
+    path_layer_out=gen_pathlayer()
 
-    qgs.exit()
-    #qgs.exitQgis()
-    print("Test1print")
-    # # qtwindow_node.get_logger().info("Test1log")
-    rclpy.spin(qtwindow_node)
-    qtwindow_node.destroy_node()
 
+    #add_layer_toproject(lidar_layer_out,"Cloud")
+    add_layer_toproject(zone_layer_out,"Vectorzone")
+    add_layer_toproject(path_layer_out,"VectorLine")
+    add_layer_toproject(drone_layer_out,"VectorPoint")
+    
+    cuswin=CustomWind([drone_layer_out,path_layer_out,zone_layer_out])
+    cuswin.thread.start()
+    cuswin.show()
+
+    qgs.exec()
     rclpy.shutdown()
-
-# if __name__ == "__main__":
-    # main()
-
-# main()
+    
 
 
-qgs = QgsApplication([], False)
-qgs.initQgis()
-QgsApplication.setPrefixPath("/usr/", True)
-
-#lidar_layer_out=gen_lidarlayer()
-zone_layer_out=gen_zonelayer()
-drone_layer_out=gen_dronelayer()
-path_layer_out=gen_pathlayer()
-
-
-#add_layer_toproject(lidar_layer_out,"Cloud")
-add_layer_toproject(zone_layer_out,"Vectorzone")
-add_layer_toproject(path_layer_out,"VectorLine")
-add_layer_toproject(drone_layer_out,"VectorPoint")
-
-# cuswin=CustomWind([drone_layer_out,path_layer_out,zone_layer_out,lidar_layer_out])
-cuswin=CustomWind([drone_layer_out,path_layer_out,zone_layer_out])
-cuswin.show()
-
-qgs.exit()
+if __name__ == "__main__":
+    main()
 
