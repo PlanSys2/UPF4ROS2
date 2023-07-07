@@ -1,33 +1,23 @@
 from qgis.gui import *
 from qgis.core import *
-#from qgis.PyQt.QtCore import Qt
 from PyQt5.QtCore import *
 from qgis.PyQt.QtWidgets import QAction, QMainWindow
-import sys
-import os
 import pandas as pd
 import datetime
-#sys.path=['']+sys.path
-from rclpy.node import Node
+
 import rclpy
+from rclpy.node import Node
 from rclpy.executors import MultiThreadedExecutor, SingleThreadedExecutor
 from threading import Thread
 
-from px4_msgs.msg import OffboardControlMode
-from px4_msgs.msg import TrajectorySetpoint
-from px4_msgs.msg import VehicleStatus
-from px4_msgs.msg import VehicleLocalPosition
 from px4_msgs.msg import VehicleGlobalPosition
-from std_msgs.msg import String
 
 
 def add_layer_toproject(layer,namety):
     if not layer.isValid():
         print(f"{namety} Layer failed to load!")
-        #node.get_logger().info("Not ok load")
     else:
         QgsProject.instance().addMapLayer(layer)
-        #node.get_logger().info("ok load")
 
 def gen_lidarlayer():
     lidar_layer=QgsPointCloudLayer("/home/companion/PlanSys/src/UPF4ROS2/upf4ros2_demo/upf4ros2_demo/layers_custom/PTS_LAMB93_IGN69_0925_6326.las","lidar", "pdal")
@@ -70,7 +60,6 @@ def gen_dronelayer():
     drone_layers.commitChanges()
     tempo_vl=drone_layers.temporalProperties()
     tempo_vl.setIsActive(True)
-    #tempo_vl.setAccumulateFeatures(True) 
     tempo_vl.setStartField("date")
     tempo_vl.setMode(Qgis.VectorTemporalMode(1))
     return drone_layers
@@ -108,7 +97,6 @@ def gen_pathlayer():
     path_layers.commitChanges()
     tempo_vl=path_layers.temporalProperties()
     tempo_vl.setIsActive(True)
-    #empo_vl.setAccumulateFeatures(True) 
     tempo_vl.setStartField("date2")
     tempo_vl.setMode(Qgis.VectorTemporalMode(1))
     return path_layers
@@ -130,12 +118,8 @@ class CollectorNode(Node):
             current_time=datetime.datetime.now()
             self.df.loc[len(self.df.index)]=["d1",msg.lon,msg.lat,str(current_time)]
             self.oldtime=msg.timestamp
-            self.get_logger().info(f"{self.df}")
-            self.get_logger().info(f"{msg.timestamp}")
             self.get_logger().info(f"Longitude:{msg.lon},Latitude:{msg.lat}")
 
-    # def listener_callback(self,msg):
-        # self.get_logger().info(f"I heard: {msg.data}")
  
  
                
@@ -187,7 +171,7 @@ class CustomWind(QMainWindow):
         self.toolPan.setAction(self.actionShowlayerbis)
         
         
-        self.current_data_index=0#-1#0#-1
+        self.current_data_index=0
         self.previousRow=pd.DataFrame() #Empty dictionary for multiple drone
         self.actionPushButbis.setText("Refresh Data")
         self.timer = QTimer()

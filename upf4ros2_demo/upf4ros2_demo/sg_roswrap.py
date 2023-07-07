@@ -9,19 +9,7 @@ import pandas as pd
 import os
 
 from upf4ros2_demo_msgs.action import Mission
-#from upf4ros2_demo_msgs.srv import CallMission
 
-from std_msgs.msg import String
-
-from px4_msgs.msg import OffboardControlMode
-from px4_msgs.msg import TrajectorySetpoint
-from px4_msgs.msg import VehicleStatus
-from px4_msgs.msg import VehicleLocalPosition
-from px4_msgs.msg import VehicleGlobalPosition
-
-import time
-
-from std_msgs.msg import Bool
 
 
 class GameROSWrapper(Node):
