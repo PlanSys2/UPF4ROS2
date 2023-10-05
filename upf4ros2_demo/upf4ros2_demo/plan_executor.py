@@ -131,8 +131,19 @@ class PlanExecutorNode(Node):
         # loop through all effects of the action and update the initial state of the problem accordingly
         for effect in action.effects:
             fluent = effect.fluent.fluent()
+            
+            # myroute is not in parameters and therefore not in paramMap (as it is derived from exist keyword); also it seems z is not in effect.fluent.args but we dont need z, as the condition is not checked anyway
+            # luckily we won't need paramMap for exist objects, as the variable ?r was already resolved to 'myroute'
+            # so lets assume that all elements of effect.fluent.args that are not contained in paramMap are already resolved exist objects
+            # it is still important to keep the order of elements in effect.fluent.args so lets map the list using if/else list comprehension
+            # https://stackoverflow.com/questions/4260280/if-else-in-a-list-comprehension
+
+            # calling x.parameter in any way on myroute crashes python --> File "/home/companion/.local/lib/python3.8/site-packages/unified_planning/model/fnode.py", line 205, in parameter --> assert self.is_parameter_exp() --> AssertionError
+            # exist and forall are variables (fnode.py", line 213) --> x.__repr__()
+            
             # there seems to be a bug in UPF where fluent.fluent() unpacks the arguments from the predicate declaration instead of  -> workaround: access the arguments directly with effect.fluent.args
-            fluent_signature = [self._objects[paramMap[x.parameter().name]] for x in effect.fluent.args]
+            fluent_signature = [self._objects[paramMap[x_name]] if (x_name := x.__repr__()) in paramMap else self._objects[x_name] for x in effect.fluent.args]
+            
             value = effect.value.constant_value()
             self.set_initial_value(fluent, fluent_signature, value)
     
