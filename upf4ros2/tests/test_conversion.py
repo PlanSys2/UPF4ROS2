@@ -41,7 +41,7 @@ class TestROS2Interfaces(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):
-        shortcuts.get_env().credits_stream = None
+        shortcuts.get_environment().credits_stream = None
         pass
 
     @classmethod
@@ -101,13 +101,13 @@ class TestROS2Interfaces(unittest.TestCase):
 
     def test_expression(self):
         problem = Problem('test')
-        ex = problem.env.expression_manager.true_expression
+        ex = problem.environment.expression_manager.true_expression
 
         ex_pb = self.pb_writer.convert(ex)
         ex_up = self.pb_reader.convert(ex_pb, problem)
         self.assertEqual(ex, ex_up)
 
-        ex = problem.env.expression_manager.Int(10)
+        ex = problem.environment.expression_manager.Int(10)
 
         ex_pb = self.pb_writer.convert(ex)
         ex_up = self.pb_reader.convert(ex_pb, problem)
@@ -211,12 +211,12 @@ class TestROS2Interfaces(unittest.TestCase):
         problem.add_quality_metric(metric=metrics.MinimizeMakespan())
         problem.add_quality_metric(
             metric=metrics.MinimizeExpressionOnFinalState(
-                problem.env.expression_manager.true_expression
+                problem.environment.expression_manager.true_expression
             )
         )
         problem.add_quality_metric(
             metric=metrics.MaximizeExpressionOnFinalState(
-                problem.env.expression_manager.true_expression
+                problem.environment.expression_manager.true_expression
             )
         )
 
