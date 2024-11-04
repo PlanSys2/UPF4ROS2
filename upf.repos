@@ -2,15 +2,15 @@ repositories:
   unified-planning:
     type: git
     url: https://github.com/aiplan4eu/unified-planning.git
-    version: main
+    version: master
   up-tamer:
     type: git
     url: https://github.com/aiplan4eu/up-tamer.git
-    version: main
+    version: master
   up-pyperplan:
     type: git
     url: https://github.com/aiplan4eu/up-pyperplan.git
-    version: main
+    version: master
   ros2_planning_system:
     type: git
     url: https://github.com/PlanSys2/ros2_planning_system.git
