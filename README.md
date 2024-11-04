@@ -7,6 +7,8 @@ This repository contains a UPF TSB for ROS 2
 
 ```
 $ pip install --pre unified-planning[pyperplan,tamer]
+$ pip install ConfigSpace
+$ pip install typing_extensions==4.7.1 --upgrade
 $ cd <upf_workspace>
 $ cd src
 $ git clone https://github.com/PlanSys2/UPF4ROS2.git
