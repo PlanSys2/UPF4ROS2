@@ -24,7 +24,7 @@ jobs:
       fail-fast: false
     steps:
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip
+        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip && pip install ConfigSpace && pip install typing_extensions==4.7.1 --upgrade
       - name: fix pytest name
         run: sudo ln -s /usr/bin/pytest-3 /usr/bin/pytest
       - name: Install unified planning from sources
@@ -41,14 +41,8 @@ jobs:
           python3 scripts/test_imports.py
           cd ..
           git clone https://github.com/aiplan4eu/up-tamer
-          cd up-tamer
-          git checkout ${{env.up_tamer_commit}}
-          cd .. 
           python3 -m pip install up-tamer/
           git clone https://github.com/aiplan4eu/up-pyperplan
-          cd up-pyperplan
-          git checkout ${{env.up_pyperplan_commit}}
-          cd ..
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
 
