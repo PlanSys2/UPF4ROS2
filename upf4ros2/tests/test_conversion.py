@@ -176,7 +176,7 @@ class TestROS2Interfaces(unittest.TestCase):
 
     def test_action_instance(self):
         problem = self.problems['robot'].problem
-        plan = self.problems['robot'].plan
+        plan = self.problems['robot'].valid_plans[0]
         action_instance = plan.actions[0]
 
         action_instance_pb = self.pb_writer.convert(action_instance)
@@ -189,7 +189,7 @@ class TestROS2Interfaces(unittest.TestCase):
 
     def test_plan(self):
         problem = self.problems['robot'].problem
-        plan = self.problems['robot'].plan
+        plan = self.problems['robot'].valid_plans[0]
 
         plan_pb = self.pb_writer.convert(plan)
         plan_up = self.pb_reader.convert(plan_pb, problem)
@@ -198,7 +198,7 @@ class TestROS2Interfaces(unittest.TestCase):
 
     def test_time_triggered_plan(self):
         problem = self.problems['temporal_conditional'].problem
-        plan = self.problems['temporal_conditional'].plan
+        plan = self.problems['temporal_conditional'].valid_plans[0]
 
         plan_pb = self.pb_writer.convert(plan)
         plan_up = self.pb_reader.convert(plan_pb, problem)
@@ -254,7 +254,7 @@ class TestROS2Interfaces(unittest.TestCase):
             self.assertEqual(final_report, final_report_up)
 
     def test_compiler_result(self):
-        problem, _ = self.problems['hierarchical_blocks_world']
+        problem = self.problems['hierarchical_blocks_world'].problem
         with Compiler(name='up_grounder') as grounder:
             ground_result = grounder.compile(problem, CompilationKind.GROUNDING)
 
