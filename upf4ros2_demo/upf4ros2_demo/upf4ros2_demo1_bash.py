@@ -33,10 +33,10 @@ class UPF4ROS2PlanNode(Node):
         self._plan_one_shot_client = ActionClient(
             self,
             PlanOneShot,
-            'upf4ros2/planOneShot')
+            'upf4ros2/action/planOneShot')
 
         self._get_problem = self.create_client(
-            GetProblem, 'upf4ros2/get_problem')
+            GetProblem, 'upf4ros2/srv/get_problem')
 
         self._plan_one_shot_client_srv = self.create_client(
             PlanOneShotSrv, 'upf4ros2/srv/planOneShot')      

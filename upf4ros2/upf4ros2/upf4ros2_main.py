@@ -90,7 +90,7 @@ class UPF4ROS2Node(Node):
         self._pddl_plan_one_shot_srv = self.create_service(
             PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL', self.pddl_plan_one_shot)
         self._plan_one_shot_srv = self.create_service(
-            PlanOneShotSrv, 'upf4ros2/srv/planOneShot', self.plan_one_shot
+            PlanOneShotSrv, 'upf4ros2/srv/planOneShot', self.plan_one_shot)
 
     def get_problem(self, request, response):
         if request.problem_name not in self.problems:
