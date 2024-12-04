@@ -25,7 +25,7 @@ setup(
     tests_require=['pytest'],
     entry_points={
         'console_scripts': [
-          'upf4ros2_main = upf4ros2.upf4ros2_main:main'
+            'upf4ros2_main = upf4ros2.upf4ros2_main:main'
         ],
     },
 )

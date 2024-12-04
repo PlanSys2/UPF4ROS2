@@ -1,6 +1,6 @@
 import rclpy
 from rclpy.action import ActionClient
-#from rclpy.node import Node
+# from rclpy.node import Node
 from simple_node import Node
 
 from unified_planning import model
@@ -23,7 +23,10 @@ from upf_msgs.srv import (
 )
 
 from upf_msgs.srv import PlanOneShot as PlanOneShotSrv
-# varios puntos (lanzar el plan con todos los puntos// ir uno a uno ) checkear puntos, para eso tiene que estar en el punto y luego checkearlo
+# varios puntos (lanzar el plan con todos los puntos// ir uno a uno )
+# checkear puntos, para eso tiene que estar en el punto y luego checkearlo
+
+
 class UPF4ROS2DemoNode(Node):
 
     def __init__(self):
@@ -50,8 +53,7 @@ class UPF4ROS2DemoNode(Node):
         self._add_goal = self.create_client(
             AddGoal, 'upf4ros2/add_goal')
         self._plan_one_shot_client_srv = self.create_client(
-            PlanOneShotSrv, 'upf4ros2/srv/planOneShot')  
-    
+            PlanOneShotSrv, 'upf4ros2/srv/planOneShot')
 
     def new_problem(self, problem_name):
         srv = NewProblem.Request()
@@ -61,8 +63,8 @@ class UPF4ROS2DemoNode(Node):
         self.future = self._new_problem.call(srv)
 
         self._problem_name = problem_name
-        self.get_logger().info(f'Create the problem with name: {srv.problem_name}')
-        
+        self.get_logger().info(
+            f'Create the problem with name: {srv.problem_name}')
 
     def get_problem(self):
         srv = GetProblem.Request()
@@ -75,7 +77,10 @@ class UPF4ROS2DemoNode(Node):
         return problem
 
     def add_fluent(self, problem, fluent_name, user_type):
-        fluent = model.Fluent(fluent_name, shortcuts.BoolType(), object=user_type)
+        fluent = model.Fluent(
+            fluent_name,
+            shortcuts.BoolType(),
+            object=user_type)
         srv = AddFluent.Request()
         srv.problem_name = self._problem_name
         srv.fluent = self._ros2_interface_writer.convert(fluent, problem)
@@ -96,7 +101,6 @@ class UPF4ROS2DemoNode(Node):
 
         self.get_logger().info(f'Add fluent: {fluent_name}')
         return fluent
-
 
     def add_object(self, object_name, user_type):
         upf_object = model.Object(object_name, user_type)
@@ -130,8 +134,9 @@ class UPF4ROS2DemoNode(Node):
         self._set_initial_value.wait_for_service()
         self.future = self._set_initial_value.call(srv)
 
-        self.get_logger().info(f'Set {fluent.name}({object.name}) with value: {value_fluent}')
-    
+        self.get_logger().info(
+            f'Set {fluent.name}({object.name}) with value: {value_fluent}')
+
     def add_action(self, action):
         srv = AddAction.Request()
         srv.problem_name = self._problem_name
@@ -155,7 +160,7 @@ class UPF4ROS2DemoNode(Node):
         self.get_logger().info(f'Set new goal!')
 
     def __cancel_callback(self, action):
-        #return to old wp
+        # return to old wp
         if action.action_name == 'move':
             client = self.create_client(CallAction, action.action_name)
             while not client.wait_for_service(timeout_sec=1.0):
@@ -170,9 +175,8 @@ class UPF4ROS2DemoNode(Node):
             else:
                 self.get_logger().info('Can not return to the origin wp!')
 
-
     def get_plan_srv(self):
-        
+
         problem = self.get_problem()
 
         self.get_logger().info('Planning...')
@@ -188,7 +192,7 @@ class UPF4ROS2DemoNode(Node):
         for action in plan_result.plan.actions:
 
             params = [x.symbol_atom[0] for x in action.parameters]
-            self.get_logger().info(action.action_name+"("+", ".join(params)+")")
+            self.get_logger().info(action.action_name + "(" + ", ".join(params) + ")")
 
         for action in plan_result.plan.actions:
 
@@ -206,7 +210,7 @@ class UPF4ROS2DemoNode(Node):
             else:
                 self.get_logger().info('Action cancelled!')
                 self.__cancel_callback(action)
-        
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -215,10 +219,12 @@ def main(args=None):
     upf4ros2_demo_node = UPF4ROS2DemoNode()
 
     upf4ros2_demo_node.new_problem('test')
-    problem = upf4ros2_demo_node._ros2_interface_reader.convert(upf4ros2_demo_node.get_problem())
+    problem = upf4ros2_demo_node._ros2_interface_reader.convert(
+        upf4ros2_demo_node.get_problem())
 
     # usertype is the type of the fluent's object
-    # usertype can be 'up:bool', 'up:integer', 'up:integer[]', 'up:real', 'up:real[]', shortcuts.UserType('name')
+    # usertype can be 'up:bool', 'up:integer', 'up:integer[]', 'up:real',
+    # 'up:real[]', shortcuts.UserType('name')
     location = shortcuts.UserType('location')
 
     robot_at = upf4ros2_demo_node.add_fluent(problem, 'robot_at', location)
@@ -231,7 +237,6 @@ def main(args=None):
     room = upf4ros2_demo_node.add_object('room', location)
     gym = upf4ros2_demo_node.add_object('gym', location)
 
-
     upf4ros2_demo_node.set_initial_value(robot_at, livingroom, True)
     upf4ros2_demo_node.set_initial_value(robot_at, entrance, False)
     upf4ros2_demo_node.set_initial_value(wp_checked, entrance, False)
@@ -242,15 +247,14 @@ def main(args=None):
     # If DurativeAction
     # Set the action's duration (set_closed_duration_interval, set_open_duration_interval, set_fixed_duration, set_left_open_duration_interval or set_right_open_duration_interval)
     # move.set_closed_duration_interval(0, 10)
-    
+
     l_from = move.parameter('l_from')
     l_to = move.parameter('l_to')
-    
+
     move.add_precondition(robot_at(l_from))
-    #move.add_condition(model.StartTiming(), robot_at(l_from))
+    # move.add_condition(model.StartTiming(), robot_at(l_from))
     move.add_effect(robot_at(l_from), False)
     move.add_effect(robot_at(l_to), True)
-
 
     # ------------------------------------- #
     # Define check wp action
@@ -259,22 +263,23 @@ def main(args=None):
     check_wp.add_precondition(robot_at(wp))
     check_wp.add_effect(wp_checked(wp), True)
 
-
     upf4ros2_demo_node.add_action(move)
     upf4ros2_demo_node.add_action(check_wp)
 
-    #upf4ros2_demo_node.add_goal(robot_at(l2))
+    # upf4ros2_demo_node.add_goal(robot_at(l2))
     upf4ros2_demo_node.add_goal(wp_checked(entrance))
     upf4ros2_demo_node.add_goal(wp_checked(gym))
     upf4ros2_demo_node.add_goal(wp_checked(kitchen))
 
     problem_old_upf = upf4ros2_demo_node.get_problem()
-    problem_old = upf4ros2_demo_node._ros2_interface_reader.convert(problem_old_upf)
+    problem_old = upf4ros2_demo_node._ros2_interface_reader.convert(
+        problem_old_upf)
     upf4ros2_demo_node.get_logger().info(f'{problem_old}')
 
     upf4ros2_demo_node.get_plan_srv()
 
-    problem_updated = upf4ros2_demo_node._ros2_interface_reader.convert(upf4ros2_demo_node.get_problem())
+    problem_updated = upf4ros2_demo_node._ros2_interface_reader.convert(
+        upf4ros2_demo_node.get_problem())
     upf4ros2_demo_node.get_logger().info(f'{problem_updated}')
 
     upf4ros2_demo_node.join_spin()

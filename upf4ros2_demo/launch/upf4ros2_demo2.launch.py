@@ -19,7 +19,7 @@ def generate_launch_description():
         default_value=get_package_share_directory(
             pkg_name) + "/params/house.yaml",
         description="YAML waypoints file")
-        
+
     #
     # ACTIONS
     #

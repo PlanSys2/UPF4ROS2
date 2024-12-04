@@ -24,6 +24,7 @@ from upf_msgs.srv import (
 
 from upf_msgs.srv import PDDLPlanOneShot as PDDLPlanOneShotSrv
 
+
 class UPF4ROS2Demo1PDDL(Node):
 
     def __init__(self):
@@ -39,8 +40,8 @@ class UPF4ROS2Demo1PDDL(Node):
         self._ros2_interface_reader = ROS2InterfaceReader()
 
         self._plan_pddl_one_shot_client = ActionClient(
-            self, 
-            PDDLPlanOneShot, 
+            self,
+            PDDLPlanOneShot,
             'upf4ros2/planOneShotPDDL')
 
         self._get_problem = self.create_client(
@@ -56,18 +57,19 @@ class UPF4ROS2Demo1PDDL(Node):
         self._get_problem.wait_for_service()
         self.future = self._get_problem.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
-        problem = self._ros2_interface_reader.convert(self.future.result().problem)
+        problem = self._ros2_interface_reader.convert(
+            self.future.result().problem)
         return problem
 
     def get_plan_action(self):
-        
+
         self.get_logger().info('Planning...')
         goal_msg = PDDLPlanOneShot.Goal()
         goal_msg.plan_request.mode = msgs.PDDLPlanRequest.FILE
-        goal_msg.plan_request.domain = (get_package_share_directory('upf4ros2_demo')
-                                        + str(self._domain.value))
-        goal_msg.plan_request.problem = (get_package_share_directory('upf4ros2_demo')
-                                        + str(self._problem.value))
+        goal_msg.plan_request.domain = (get_package_share_directory(
+            'upf4ros2_demo') + str(self._domain.value))
+        goal_msg.plan_request.problem = (get_package_share_directory(
+            'upf4ros2_demo') + str(self._problem.value))
 
         self._plan_pddl_one_shot_client.wait_for_server()
 
@@ -85,14 +87,14 @@ class UPF4ROS2Demo1PDDL(Node):
         self.get_logger().info('Solution found :)')
 
     def get_plan_srv(self):
-        
+
         self.get_logger().info('Planning...')
         srv = PDDLPlanOneShotSrv.Request()
         srv.plan_request.mode = msgs.PDDLPlanRequest.FILE
         srv.plan_request.domain = (get_package_share_directory('upf4ros2_demo')
-                                        + str(self._domain.value))
-        srv.plan_request.problem = (get_package_share_directory('upf4ros2_demo')
-                                        + str(self._problem.value))
+                                   + str(self._domain.value))
+        srv.plan_request.problem = (get_package_share_directory(
+            'upf4ros2_demo') + str(self._problem.value))
 
         self._plan_pddl_one_shot_client_srv.wait_for_service()
 
@@ -103,8 +105,8 @@ class UPF4ROS2Demo1PDDL(Node):
         for action in plan_result.plan.actions:
 
             params = [x.symbol_atom[0] for x in action.parameters]
-            self.get_logger().info(action.action_name+"("+", ".join(params)+")")
-        
+            self.get_logger().info(action.action_name + "(" + ", ".join(params) + ")")
+
 
 def main(args=None):
     rclpy.init(args=args)

@@ -19,6 +19,7 @@ from upf_msgs.srv import (
 
 from upf_msgs.srv import PlanOneShot as PlanOneShotSrv
 
+
 class UPF4ROS2PlanNode(Node):
 
     def __init__(self):
@@ -39,7 +40,7 @@ class UPF4ROS2PlanNode(Node):
             GetProblem, 'upf4ros2/srv/get_problem')
 
         self._plan_one_shot_client_srv = self.create_client(
-            PlanOneShotSrv, 'upf4ros2/srv/planOneShot')      
+            PlanOneShotSrv, 'upf4ros2/srv/planOneShot')
 
     def get_problem(self):
         srv = GetProblem.Request()
@@ -55,12 +56,13 @@ class UPF4ROS2PlanNode(Node):
         self.get_logger().info('Planning...')
         problem = self.get_problem()
         goal_msg = PlanOneShot.Goal()
-        goal_msg.plan_request.problem = self._ros2_interface_writer.convert(problem)
+        goal_msg.plan_request.problem = self._ros2_interface_writer.convert(
+            problem)
 
         self._plan_one_shot_client.wait_for_server()
-        self.future = self._plan_one_shot_client.send_goal_async(goal_msg, feedback_callback=self.feedback_callback)
+        self.future = self._plan_one_shot_client.send_goal_async(
+            goal_msg, feedback_callback=self.feedback_callback)
         self.future.add_done_callback(self.goal_response_callback)
-
 
     def goal_response_callback(self, future):
         goal_handle = future.result()
@@ -70,12 +72,11 @@ class UPF4ROS2PlanNode(Node):
 
         self.get_logger().info('Solution found :)')
 
-
     def feedback_callback(self, feedback_msg):
         feedback = feedback_msg.feedback
 
     def get_plan_srv(self, problem):
-        
+
         self.get_logger().info('Planning...')
         srv = PlanOneShotSrv.Request()
         srv.problem = problem
@@ -89,9 +90,8 @@ class UPF4ROS2PlanNode(Node):
         for action in plan_result.plan.actions:
 
             params = [x.symbol_atom[0] for x in action.parameters]
-            self.get_logger().info(action.action_name+"("+", ".join(params)+")")
+            self.get_logger().info(action.action_name + "(" + ", ".join(params) + ")")
 
-        
 
 def main(args=None):
     rclpy.init(args=args)

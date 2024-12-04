@@ -31,7 +31,7 @@ Expression expression
 # In particular, for this metric to be useful in many practical problems, the cost expression
 # should allow referring to the action parameters (and possibly the current state at the action start/end).
 # This is very awkward to do in this setting where the expression is detached from its scope.
-string[] action_cost_names
+upf_msgs/Action[] action_cost_names
 upf_msgs/Expression[] action_cost_expr
 
 upf_msgs/Expression[<=1] default_action_cost

@@ -46,6 +46,8 @@ from unified_planning.model.effect import EffectKind
 from unified_planning.model.operators import OperatorKind
 import unified_planning.plans
 from upf4ros2.converter import Converter, handles
+from unified_planning.plans.plan import PlanKind
+from unified_planning.engines.results import PlanGenerationResultStatus
 # from upf4ros2.ros2_utils import print_expr
 
 from upf_msgs import msg as msgs
@@ -57,8 +59,17 @@ def convert_type_str(s: str, problem: Problem) -> model.types.Type:
     elif s == 'up:integer':
         return problem.environment.type_manager.IntType()
     elif 'up:integer[' in s:
-        lb = int(s.split('[')[1].split(',')[0])
-        ub = int(s.split(',')[1].split(']')[0])
+        lb_str = s.split('[')[1].split(',')[0]
+        if lb_str == 'inf':
+            lb = None
+        else:
+            lb = int(lb_str)
+
+        ub_str = s.split(',')[1].split(']')[0].strip()
+        if ub_str == 'inf':
+            ub = None
+        else:
+            ub = int(ub_str)
         return problem.environment.type_manager.IntType(lb, ub)
     elif s == 'up:real':
         return problem.environment.type_manager.RealType()
@@ -69,11 +80,11 @@ def convert_type_str(s: str, problem: Problem) -> model.types.Type:
         )
     else:
         assert not s.startswith('up:'), f'Unhandled builtin type: {s}'
-        user_type=None
+        user_type = None
         try:
-            user_type=problem.user_type(s)
+            user_type = problem.user_type(s)
         except UPValueError:
-            user_type=shortcuts.UserType(s)
+            user_type = shortcuts.UserType(s)
         return user_type
 
 
@@ -124,7 +135,8 @@ class ROS2InterfaceReader(Converter):
 
     @handles(msgs.Fluent)
     def _convert_fluent(self, msg: msgs.Fluent, problem: Problem) -> Fluent:
-        value_type: model.types.Type = convert_type_str(msg.value_type, problem)
+        value_type: model.types.Type = convert_type_str(
+            msg.value_type, problem)
         sig: list = []
         for p in msg.parameters:
             sig.append(self.convert(p, problem))
@@ -183,16 +195,20 @@ class ROS2InterfaceReader(Converter):
             return problem.environment.expression_manager.ParameterExp(
                 param=Parameter(
                     root_expr.atom[0].symbol_atom[0],
-                    convert_type_str(root_expr.type, problem), problem.environment
-                ),
+                    convert_type_str(
+                        root_expr.type,
+                        problem),
+                    problem.environment),
             )
 
         elif root_expr.kind == msgs.ExpressionItem.VARIABLE:
             return problem.environment.expression_manager.VariableExp(
                 var=Variable(
                     root_expr.atom[0].symbol_atom[0],
-                    convert_type_str(root_expr.type, problem), problem.environment
-                ),
+                    convert_type_str(
+                        root_expr.type,
+                        problem),
+                    problem.environment),
             )
 
         elif root_expr.kind == msgs.ExpressionItem.STATE_VARIABLE:
@@ -211,7 +227,8 @@ class ROS2InterfaceReader(Converter):
 
             args.extend([self.convert(m, problem) for m in clusters])
             if payload is not None:
-                return problem.environment.expression_manager.FluentExp(payload, tuple(args))
+                return problem.environment.expression_manager.FluentExp(
+                    payload, tuple(args))
             else:
                 raise UPException(f'Unable to form fluent expression {msg}')
 
@@ -235,9 +252,8 @@ class ROS2InterfaceReader(Converter):
                 variables = clusters[:-1]
                 quantified_expression = clusters[-1]
                 args.append(self.convert(quantified_expression, problem))
-                payload = tuple(
-                    [self.convert(var, problem).variable() for var in variables]
-                )
+                payload = tuple([self.convert(var, problem).variable()
+                                 for var in variables])
             else:
                 args.extend([self.convert(m, problem) for m in clusters])
 
@@ -267,7 +283,8 @@ class ROS2InterfaceReader(Converter):
             if len(msg.expressions) > 1:
                 container = msg.expressions[2].atom[0].symbol_atom[0]
             tp = model.timing.Timepoint(kd, container)
-            return problem.environment.expression_manager.TimingExp(model.Timing(0, tp))
+            return problem.environment.expression_manager.TimingExp(
+                model.Timing(0, tp))
         raise ValueError(f'Unknown expression kind `{root_expr.kind}`')
 
     @handles(msgs.Atom)
@@ -282,7 +299,8 @@ class ROS2InterfaceReader(Converter):
                     msg.real_atom[0].numerator, msg.real_atom[0].denominator)
             )
         elif len(msg.boolean_atom) > 0:
-            return problem.environment.expression_manager.Bool(msg.boolean_atom[0])
+            return problem.environment.expression_manager.Bool(
+                msg.boolean_atom[0])
         elif len(msg.symbol_atom) > 0:
             # If atom symbols, return the equivalent UP alternative
             # Note that parameters are directly handled at expression level
@@ -309,22 +327,95 @@ class ROS2InterfaceReader(Converter):
             )
         elif msg.type_name.startswith('up:real['):
             tmp = msg.type_name.split('[')[1].split(']')[0].split(', ')
-            lower_bound = fractions.Fraction(tmp[0]) if tmp[0] != '-inf' else None
-            upper_bound = fractions.Fraction(tmp[1]) if tmp[1] != 'inf' else None
+            lower_bound = fractions.Fraction(
+                tmp[0]) if tmp[0] != '-inf' else None
+            upper_bound = fractions.Fraction(
+                tmp[1]) if tmp[1] != 'inf' else None
             return problem.environment.type_manager.RealType(
                 lower_bound=lower_bound, upper_bound=upper_bound
             )
         else:
-            father = (
-                problem.user_type(msg.parent_type) if msg.parent_type != '' else None
-            )
-            return problem.environment.type_manager.UserType(name=msg.type_name, father=father)
+            father = (problem.user_type(msg.parent_type)
+                      if msg.parent_type != '' else None)
+            return problem.environment.type_manager.UserType(
+                name=msg.type_name, father=father)
+
+    def _convert_decomposition(
+        self, problem: unified_planning.model.htn.HierarchicalProblem
+    ) -> unified_planning.plans.hierarchical_plan.Decomposition:
+        decomposition = unified_planning.plans.hierarchical_plan.Decomposition()
+
+        for subtask in problem.task_network.subtasks:
+            if isinstance(subtask.task, unified_planning.model.htn.Method):
+
+                method_instance = unified_planning.plans.MethodInstance(
+                    method=problem.method(subtask.task.name),
+                    parameters=subtask.parameters,
+                    decomposition=self._reconstruct_decomposition(problem)
+                )
+                decomposition.subtasks[subtask.identifier] = method_instance
+
+            elif isinstance(subtask.task, unified_planning.model.htn.task.Task):
+                decomposition.subtasks[subtask.identifier] = subtask.task
+
+            elif isinstance(subtask.task, unified_planning.plans.ActionInstance):
+                action_instance = unified_planning.plans.ActionInstance(
+                    action=problem.action(subtask.task.name),
+                    actual_parameters=subtask.parameters
+                )
+                decomposition.subtasks[subtask.identifier] = action_instance
+
+            else:
+                raise ValueError(
+                    f"Unknown subtask type: {type(subtask.task)}")
+
+        return decomposition
+
+    @handles(msgs.Schedule)
+    def _convert_schedule(
+        self, msg: msgs.Schedule, problem: Problem
+    ) -> unified_planning.plans.Schedule:
+
+        activities = [problem.get_activity(act_name)
+                      for act_name in msg.activities_name]
+        assignment = {}
+        for expr in msg.variable_assignments:
+
+            for item in expr.expressions:
+                var_name = item.type
+                container, kind = var_name.split(".")
+                activity = problem.get_activity(container)
+
+                if ".start" in var_name or ".end" in var_name:
+                    if kind == "start":
+                        var = model.Timepoint(
+                            model.TimepointKind.START, container)
+                    elif kind == "end":
+                        var = model.Timepoint(
+                            model.TimepointKind.END, container)
+                    else:
+                        raise ValueError(f"Invalid timepoint kind: {kind}")
+                else:
+                    var = activity.get_parameter(kind)
+                    if var is None:
+                        raise ValueError(
+                            f"Parameter '{var_name}' not found in the problem.")
+
+                value = self.convert(item.atom[0], problem)
+                assignment[var] = value
+
+        return unified_planning.plans.Schedule(
+            activities=activities,
+            assignment=assignment
+        )
 
     @handles(msgs.Problem)
     def _convert_problem(
         self, msg: msgs.Problem, env: Optional[Environment] = None
     ) -> Problem:
-        problem_name = str(msg.problem_name) if str(msg.problem_name) != '' else None
+        problem_name = str(
+            msg.problem_name) if str(
+            msg.problem_name) != '' else None
         if len(msg.hierarchy) > 0:
             problem = model.htn.HierarchicalProblem(name=problem_name, env=env)
         else:
@@ -344,14 +435,16 @@ class ROS2InterfaceReader(Converter):
         for f in msg.actions:
             problem.add_action(self.convert(f, problem))
         for eff in msg.timed_effects:
-            ot = self.convert(eff.occurrence_time, problem)
-            effect = self.convert(eff.effect, problem)
-            problem.add_timed_effect(
-                timing=ot,
-                fluent=effect.fluent,
-                value=effect.value,
-                condition=effect.condition,
-            )
+            ot = self.convert(eff.occurrence_time)
+            for e in eff.effect:
+                effect = self.convert(e, problem)
+
+                problem.add_timed_effect(
+                    timing=ot,
+                    fluent=effect.fluent,
+                    value=effect.value,
+                    condition=effect.condition,
+                )
 
         for assign in msg.initial_state:
             problem.set_initial_value(
@@ -386,8 +479,9 @@ class ROS2InterfaceReader(Converter):
         self, msg: msgs.AbstractTaskDeclaration, problem: Problem
     ):
         return model.htn.Task(
-            msg.name, [self.convert(p, problem) for p in msg.parameters], problem.environment
-        )
+            msg.name, [
+                self.convert(
+                    p, problem) for p in msg.parameters], problem.environment)
 
     @handles(msgs.Task)
     def _convert_task(
@@ -400,7 +494,11 @@ class ROS2InterfaceReader(Converter):
         else:
             raise ValueError(f'Unknown task name: {msg.task_name}')
         parameters = [self.convert(p, problem) for p in msg.parameters]
-        return model.htn.Subtask(task, *parameters, ident=msg.id, _env=problem.environment)
+        return model.htn.Subtask(
+            task,
+            *parameters,
+            ident=msg.id,
+            _env=problem.environment)
 
     @handles(msgs.Method)
     def _convert_method(
@@ -413,16 +511,19 @@ class ROS2InterfaceReader(Converter):
         )
         achieved_task_params = []
         for p in msg.achieved_task.parameters:
-            achieved_task_params.append(method.parameter(p.expressions[0].atom[0].symbol_atom[0]))
+            achieved_task_params.append(method.parameter(
+                p.expressions[0].atom[0].symbol_atom[0]))
         method.set_task(
-            problem.get_task(msg.achieved_task.task_name), *achieved_task_params
-        )
+            problem.get_task(
+                msg.achieved_task.task_name),
+            *achieved_task_params)
         for st in msg.subtasks:
             method.add_subtask(self.convert(st, problem))
         for c in msg.constraints:
             method.add_constraint(self.convert(c, problem))
         for c in msg.conditions:
-            assert len(c.span) == 0, 'Timed conditions are currently unsupported.'
+            assert len(
+                c.span) == 0, 'Timed conditions are currently unsupported.'
             method.add_precondition(self.convert(c.cond, problem))
         return method
 
@@ -454,7 +555,7 @@ class ROS2InterfaceReader(Converter):
         if msg.kind == msgs.Metric.MINIMIZE_ACTION_COSTS:
             costs = {}
             for i in range(len(msg.action_cost_names)):
-                costs[list(msg.action_cost_names)[i]] = self.convert(
+                costs[self.convert(list(msg.action_cost_names)[i], problem)] = self.convert(
                     msg.action_cost_expr[i], problem)
 
             return metrics.MinimizeActionCosts(
@@ -488,7 +589,10 @@ class ROS2InterfaceReader(Converter):
             raise UPException(f'Unknown metric kind `{msg.kind}`')
 
     @handles(msgs.Action)
-    def _convert_action(self, msg: msgs.Action, problem: Problem) -> model.Action:
+    def _convert_action(
+            self,
+            msg: msgs.Action,
+            problem: Problem) -> model.Action:
         action: model.Action
 
         parameters = OrderedDict()
@@ -497,14 +601,17 @@ class ROS2InterfaceReader(Converter):
 
         if len(msg.duration) > 0:
             action = DurativeAction(msg.name, parameters)
-            action.set_duration_constraint(self.convert(msg.duration[0], problem))
+            action.set_duration_constraint(
+                self.convert(msg.duration[0], problem))
         else:
             action = InstantaneousAction(msg.name, parameters)
 
         conditions = []
         for condition in msg.conditions:
             cond = self.convert(condition.cond, problem)
-            span = self.convert(condition.span[0]) if len(condition.span) > 0 else None
+            span = self.convert(
+                condition.span[0]) if len(
+                condition.span) > 0 else None
             conditions.append((cond, span))
 
         effects = []
@@ -524,15 +631,17 @@ class ROS2InterfaceReader(Converter):
                 if e.kind == EffectKind.ASSIGN:
                     action.add_effect(ot, e.fluent, e.value, e.condition)
                 elif e.kind == EffectKind.DECREASE:
-                    action.add_decrease_effect(ot, e.fluent, e.value, e.condition)
+                    action.add_decrease_effect(
+                        ot, e.fluent, e.value, e.condition)
                 elif e.kind == EffectKind.INCREASE:
-                    action.add_increase_effect(ot, e.fluent, e.value, e.condition)
+                    action.add_increase_effect(
+                        ot, e.fluent, e.value, e.condition)
         elif isinstance(action, InstantaneousAction):
             for c, _ in conditions:
                 action.add_precondition(c)
             for e, _ in effects:
                 if e.kind == EffectKind.ASSIGN:
-                    action.add_effect(e.fluent, e.value, e.condition)
+                    action.add_effect(e.fluent, e.value, e.condition, e.forall)
                 elif e.kind == EffectKind.DECREASE:
                     action.add_decrease_effect(e.fluent, e.value, e.condition)
                 elif e.kind == EffectKind.INCREASE:
@@ -552,6 +661,13 @@ class ROS2InterfaceReader(Converter):
         else:
             kind = EffectKind.ASSIGN
 
+        forall = []
+        if msg.forall:
+            for v in msg.forall:
+                variable = model.Variable(
+                    v.name, self.convert(v.type, problem))
+                forall.append(variable)
+
         fluent = self.convert(msg.fluent, problem)
         condition = self.convert(msg.condition, problem)
         value = self.convert(msg.value, problem)
@@ -561,6 +677,7 @@ class ROS2InterfaceReader(Converter):
             value=value,
             condition=condition,
             kind=kind,
+            forall=forall
         )
 
     @handles(msgs.Duration)
@@ -575,7 +692,8 @@ class ROS2InterfaceReader(Converter):
         )
 
     @handles(msgs.TimeInterval)
-    def _convert_timed_interval(self, msg: msgs.TimeInterval) -> model.TimeInterval:
+    def _convert_timed_interval(
+            self, msg: msgs.TimeInterval) -> model.TimeInterval:
         return model.TimeInterval(
             lower=self.convert(msg.lower),
             upper=self.convert(msg.upper),
@@ -597,7 +715,9 @@ class ROS2InterfaceReader(Converter):
         return fractions.Fraction(msg.numerator, msg.denominator)
 
     @handles(msgs.Timepoint)
-    def _convert_timepoint(self, msg: msgs.Timepoint) -> model.timing.Timepoint:
+    def _convert_timepoint(
+            self,
+            msg: msgs.Timepoint) -> model.timing.Timepoint:
         if msg.kind == msgs.Timepoint.GLOBAL_START:
             kind = model.timing.TimepointKind.GLOBAL_START
         elif msg.kind == msgs.Timepoint.GLOBAL_END:
@@ -616,10 +736,20 @@ class ROS2InterfaceReader(Converter):
         self, msg: msgs.Plan, problem: Problem
     ) -> unified_planning.plans.Plan:
         actions = [self.convert(a, problem) for a in msg.actions]
+
         if all(isinstance(a, tuple) for a in actions):
-            return unified_planning.plans.TimeTriggeredPlan(actions)
+            plan = unified_planning.plans.TimeTriggeredPlan(actions)
         else:
-            return unified_planning.plans.SequentialPlan(actions=actions)
+            plan = unified_planning.plans.SequentialPlan(actions=actions)
+
+        if (PlanKind(msg.kind) == PlanKind.HIERARCHICAL_PLAN):
+
+            decomposition = self._convert_decomposition(problem)
+            hierarchical_plan = unified_planning.plans.HierarchicalPlan(
+                plan, decomposition)
+            plan = hierarchical_plan
+
+        return plan
 
     @handles(msgs.ActionInstance)
     def _convert_action_instance(
@@ -634,7 +764,8 @@ class ROS2InterfaceReader(Converter):
     ]:
         # action instance parameters are atoms but in UP they are FNodes
         # converting to up.model.FNode
-        parameters = tuple([self.convert(param, problem) for param in msg.parameters])
+        parameters = tuple([self.convert(param, problem)
+                           for param in msg.parameters])
 
         action_instance = unified_planning.plans.ActionInstance(
             problem.action(msg.action_name),
@@ -660,32 +791,26 @@ class ROS2InterfaceReader(Converter):
     ) -> unified_planning.engines.PlanGenerationResult:
         if result.status == msgs.PlanGenerationResult.SOLVED_SATISFICING:
             status = (
-                unified_planning.engines.results.PlanGenerationResultStatus.SOLVED_SATISFICING
-            )
+                unified_planning.engines.results.PlanGenerationResultStatus.SOLVED_SATISFICING)
         elif result.status == msgs.PlanGenerationResult.SOLVED_OPTIMALLY:
             status = (
-                unified_planning.engines.results.PlanGenerationResultStatus.SOLVED_OPTIMALLY
-            )
+                unified_planning.engines.results.PlanGenerationResultStatus.SOLVED_OPTIMALLY)
         elif result.status == msgs.PlanGenerationResult.UNSOLVABLE_PROVEN:
             status = (
-                unified_planning.engines.results.PlanGenerationResultStatus.UNSOLVABLE_PROVEN
-            )
+                unified_planning.engines.results.PlanGenerationResultStatus.UNSOLVABLE_PROVEN)
         elif result.status == msgs.PlanGenerationResult.UNSOLVABLE_INCOMPLETELY:
             status = (
-                unified_planning.engines.results.PlanGenerationResultStatus.UNSOLVABLE_INCOMPLETELY
-            )
+                PlanGenerationResultStatus.UNSOLVABLE_INCOMPLETELY)
         elif result.status == msgs.PlanGenerationResult.TIMEOUT:
             status = unified_planning.engines.results.PlanGenerationResultStatus.TIMEOUT
         elif result.status == msgs.PlanGenerationResult.MEMOUT:
             status = unified_planning.engines.results.PlanGenerationResultStatus.MEMOUT
         elif result.status == msgs.PlanGenerationResult.INTERNAL_ERROR:
             status = (
-                unified_planning.engines.results.PlanGenerationResultStatus.INTERNAL_ERROR
-            )
+                unified_planning.engines.results.PlanGenerationResultStatus.INTERNAL_ERROR)
         elif result.status == msgs.PlanGenerationResult.UNSUPPORTED_PROBLEM:
             status = (
-                unified_planning.engines.results.PlanGenerationResultStatus.UNSUPPORTED_PROBLEM
-            )
+                unified_planning.engines.results.PlanGenerationResultStatus.UNSUPPORTED_PROBLEM)
         else:
             raise UPException(f'Unknown Planner Status: {result.status}')
 
@@ -740,13 +865,13 @@ class ROS2InterfaceReader(Converter):
         lifted_problem: unified_planning.model.Problem,
     ) -> unified_planning.engines.CompilerResult:
         problem = self.convert(result.problem, lifted_problem.environment)
-        mymap: Dict[
-            unified_planning.model.Action,
-            Tuple[unified_planning.model.Action, List[unified_planning.model.FNode]],
-        ] = {}
+        mymap: Dict[unified_planning.model.Action,
+                    Tuple[unified_planning.model.Action,
+                          List[unified_planning.model.FNode]],
+                    ] = {}
         for grounded_action in problem.actions:
             map_back_plan = dict(zip(
-                    result.map_back_plan_keys, result.map_back_plan_values))
+                result.map_back_plan_keys, result.map_back_plan_values))
             original_action_instance = self.convert(
                 map_back_plan[grounded_action.name], lifted_problem
             )
@@ -757,10 +882,11 @@ class ROS2InterfaceReader(Converter):
         return unified_planning.engines.CompilerResult(
             problem=problem,
             map_back_action_instance=partial(
-                unified_planning.engines.compilers.utils.lift_action_instance, map=mymap
-            ),
+                unified_planning.engines.compilers.utils.lift_action_instance,
+                map=mymap),
             engine_name=result.engine,
-            log_messages=[self.convert(log) for log in result.log_messages],
+            log_messages=[
+                self.convert(log) for log in result.log_messages],
         )
 
     @handles(msgs.ValidationResult)
@@ -772,9 +898,11 @@ class ROS2InterfaceReader(Converter):
         elif result.status == msgs.ValidationResult.INVALID:
             r_status = unified_planning.engines.ValidationResultStatus.INVALID
         else:
-            raise UPException(f'Unexpected ValidationResult status: {result.status}')
+            raise UPException(
+                f'Unexpected ValidationResult status: {result.status}')
         return unified_planning.engines.ValidationResult(
             status=r_status,
             engine_name=result.engine,
             log_messages=[self.convert(log) for log in result.log_messages],
+            metrics={metric.key: metric.value for metric in result.metrics}
         )

@@ -19,6 +19,7 @@ from upf_msgs.srv import (
 
 from simple_node import Node
 
+
 class CheckWpAction(Node):
 
     def __init__(self):
@@ -27,8 +28,12 @@ class CheckWpAction(Node):
         self._problem_name = 'test'
 
         self._userType = shortcuts.UserType('location')
-        self._fluent = model.Fluent("wp_checked", shortcuts.BoolType(), object=self._userType)
-        self._fluent_robot_at = model.Fluent("robot_at", shortcuts.BoolType(), object=self._userType)
+        self._fluent = model.Fluent(
+            "wp_checked",
+            shortcuts.BoolType(),
+            object=self._userType)
+        self._fluent_robot_at = model.Fluent(
+            "robot_at", shortcuts.BoolType(), object=self._userType)
 
         self._ros2_interface_writer = ROS2InterfaceWriter()
         self._ros2_interface_reader = ROS2InterfaceReader()
@@ -37,16 +42,14 @@ class CheckWpAction(Node):
             GetProblem, 'upf4ros2/get_problem')
         self._set_initial_value = self.create_client(
             SetInitialValue, 'upf4ros2/set_initial_value')
-        
 
         self.create_service(
             CallAction, 'check_wp', self.__execute_callback)
 
-    
     def get_problem(self):
         """ get actual state of the problem
         Args:
-        
+
         """
         srv = GetProblem.Request()
         srv.problem_name = self._problem_name
@@ -60,7 +63,7 @@ class CheckWpAction(Node):
     def set_initial_value(self, fluent, object, value_fluent):
         """ set initial value to the fluent
         Args:
-            fluent (up.model.Fluent): fluent 
+            fluent (up.model.Fluent): fluent
             object (up.model.Object): fluent's object
             value_fluent (bool): new value
         """
@@ -82,9 +85,9 @@ class CheckWpAction(Node):
         self._set_initial_value.wait_for_service()
         self.future = self._set_initial_value.call(srv)
 
-        self.get_logger().info(f'Set {fluent.name}({object.name}) with value: {value_fluent}')
+        self.get_logger().info(
+            f'Set {fluent.name}({object.name}) with value: {value_fluent}')
 
-        
     def __execute_callback(self, request, response):
         """ srv callback to call the NavigateToPose action
         Args:
@@ -108,8 +111,9 @@ class CheckWpAction(Node):
         else:
             self.get_logger().info("Cannot check wp because the wp was not accesible.")
             response.result = False
-            
+
         return response
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -119,6 +123,7 @@ def main(args=None):
     check_wp_action.join_spin()
 
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

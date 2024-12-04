@@ -17,6 +17,7 @@ from upf_msgs.srv import (
 
 from simple_node import Node
 
+
 class NavigationAction(Node):
 
     def __init__(self):
@@ -30,7 +31,8 @@ class NavigationAction(Node):
         self.declare_parameter(wps_param_name, [''])
 
         # getting params
-        waypoints = self.get_parameter(wps_param_name).get_parameter_value().string_array_value
+        waypoints = self.get_parameter(
+            wps_param_name).get_parameter_value().string_array_value
 
         # load points
         self.load_wps(waypoints)
@@ -38,11 +40,14 @@ class NavigationAction(Node):
         self._problem_name = 'test'
 
         self._userType = shortcuts.UserType('location')
-        self._fluent = model.Fluent("robot_at", shortcuts.BoolType(), object=self._userType)
+        self._fluent = model.Fluent(
+            "robot_at",
+            shortcuts.BoolType(),
+            object=self._userType)
 
         self._ros2_interface_writer = ROS2InterfaceWriter()
         self._ros2_interface_reader = ROS2InterfaceReader()
-        
+
         self.__nav_to_pose_client = self.create_action_client(
             NavigateToPose,
             '/navigate_to_pose')
@@ -53,7 +58,6 @@ class NavigationAction(Node):
         self.create_service(
             CallAction, 'move', self.__execute_callback)
 
-    
     def load_wps(self, waypoints: List[str]):
         """ load waypoints of list strings into a dictionary of floats
         Args:
@@ -75,7 +79,7 @@ class NavigationAction(Node):
     def set_initial_value(self, fluent, object, value_fluent):
         """ set initial value to the fluent
         Args:
-            fluent (up.model.Fluent): fluent 
+            fluent (up.model.Fluent): fluent
             object (up.model.Object): fluent's object
             value_fluent (bool): new value
         """
@@ -97,9 +101,9 @@ class NavigationAction(Node):
         self._set_initial_value.wait_for_service()
         self.future = self._set_initial_value.call(srv)
 
-        self.get_logger().info(f'Set {fluent.name}({object.name}) with value: {value_fluent}')
+        self.get_logger().info(
+            f'Set {fluent.name}({object.name}) with value: {value_fluent}')
 
-        
     def __execute_callback(self, request, response):
         """ srv callback to call the NavigateToPose action
         Args:
@@ -135,8 +139,9 @@ class NavigationAction(Node):
         else:
             self.get_logger().info("Goal to " + str(wp) + " was rejected!")
             response.result = False
-            
+
         return response
+
 
 def main(args=None):
     rclpy.init(args=args)
@@ -146,6 +151,7 @@ def main(args=None):
     navigation_action.join_spin()
 
     rclpy.shutdown()
+
 
 if __name__ == '__main__':
     main()

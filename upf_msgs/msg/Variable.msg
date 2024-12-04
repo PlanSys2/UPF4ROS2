@@ -1,0 +1,2 @@
+string name
+upf_msgs/TypeDeclaration type
