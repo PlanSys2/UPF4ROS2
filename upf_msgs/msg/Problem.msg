@@ -28,6 +28,8 @@ upf_msgs/Hierarchy[<=1] hierarchy
 # all features of the problem
 uint8[] features
 
+upf_msgs/Expression[] trajectory_constraints
+
 ## Features of the problem.
 ## Features are essential in that not supporting a feature `X` should allow disregarding any field tagged with `features: [X]`.
 

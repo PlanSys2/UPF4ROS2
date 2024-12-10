@@ -711,6 +711,7 @@ class ROS2InterfaceWriter(Converter):
 
     @handles(model.Problem, model.htn.HierarchicalProblem)
     def _convert_problem(self, problem: model.Problem) -> msgs.Problem:
+
         goals = [msgs.Goal(goal=self.convert(g)) for g in problem.goals]
         for t_goal in problem.timed_goals:
             for g in problem.timed_goals[t_goal]:
@@ -737,6 +738,12 @@ class ROS2InterfaceWriter(Converter):
             assignment.fluent = self.convert(x)
             assignment.value = self.convert(v)
             ret.initial_state.append(assignment)
+
+        if len(problem.trajectory_constraints) > 0:
+            ret.features.append(msgs.Problem.TRAJECTORY_CONSTRAINTS)
+            for constraint in problem.trajectory_constraints:
+                condition = self.convert(constraint)
+                ret.trajectory_constraints.append(condition)
 
         ret.timed_effects = [
             msgs.TimedEffect(

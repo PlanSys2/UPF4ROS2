@@ -327,12 +327,11 @@ class TestROS2InterfacesProblems(unittest.TestCase):
 
     def test_all_plans(self):
         for name, example in self.problems.items():
+            problem = example.problem
             if example.valid_plans:
-                problem = example.problem
                 plan = example.valid_plans[0]
                 plan_pb = self.pb_writer.convert(plan)
                 plan_up = self.pb_reader.convert(plan_pb, problem)
-                # self.assertEqual(plan, plan_up)
                 self.assertEqual(hash(plan), hash(plan_up))
 
     def test_some_plan_generations(self):
