@@ -49,7 +49,7 @@ jobs:
       - name: Create custom repos
         run: wget -O /tmp/all.repos https://raw.githubusercontent.com/igonzf/UPF4ROS2/main/upf.repos
       - name: build and test
-        uses: ros-tooling/action-ros-ci@0.2.6
+        uses: ros-tooling/action-ros-ci@0.3.15
         with:
           package-name: upf4ros2 upf_msgs
           target-ros2-distro: humble
