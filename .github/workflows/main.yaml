@@ -23,6 +23,8 @@ jobs:
         os: [ubuntu-22.04]
       fail-fast: false
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip && pip install ConfigSpace && pip install typing_extensions==4.7.1 --upgrade
       - name: fix pytest name
@@ -45,9 +47,8 @@ jobs:
           git clone https://github.com/aiplan4eu/up-pyperplan
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
-      - name: Copy upf.repos from PR
-        run: |
-          cp /github/workspace/upf.repos /tmp/all.repos
+      - name: Create custom repos
+        run: cp upf.repos /tmp/all.repos
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.3.15
         with:
