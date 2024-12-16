@@ -45,7 +45,8 @@ jobs:
           git clone https://github.com/aiplan4eu/up-pyperplan
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
-
+      - name: check path
+        run: pwd
       - name: Create custom repos
         run: cp upf.repos /tmp/all.repos
       - name: build and test
