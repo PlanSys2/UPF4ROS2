@@ -47,15 +47,14 @@ jobs:
           git clone https://github.com/aiplan4eu/up-pyperplan
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
-      - name: Print GITHUB_WORKSPACE
-        run: echo "El directorio de trabajo es ${{ env.GITHUB_WORKSPACE }}"
-      - name: List repository files
-        run: ls -la $GITHUB_WORKSPACE
+      - name: Create custom repos
+        run: cp upf.repos /tmp/all.repos
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.3.15
         with:
           package-name: upf4ros2 upf_msgs
           target-ros2-distro: humble
+          vcs-repo-file-url: /tmp/all.repos
           colcon-defaults: |
             {
               "test": {
