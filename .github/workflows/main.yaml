@@ -47,7 +47,7 @@ jobs:
           pip install unified_planning[tamer]
 
       - name: Create custom repos
-        run: cp /github/workspace/upf.repos /tmp/all.repos
+        run: cp $GITHUB_WORKSPACE/upf.repos /tmp/all.repos
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.3.15
         with:
