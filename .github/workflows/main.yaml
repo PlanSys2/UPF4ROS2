@@ -45,9 +45,9 @@ jobs:
           git clone https://github.com/aiplan4eu/up-pyperplan
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
-
-      - name: Create custom repos
-        run: wget -O /tmp/all.repos https://raw.githubusercontent.com/PlanSys2/UPF4ROS2/main/upf.repos
+      - name: Copy upf.repos from PR
+        run: |
+          cp /github/workspace/upf.repos /tmp/all.repos
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.3.15
         with:
