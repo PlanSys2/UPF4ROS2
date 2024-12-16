@@ -23,6 +23,8 @@ jobs:
         os: [ubuntu-22.04]
       fail-fast: false
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
       - name: Install deps
         run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip && pip install ConfigSpace && pip install typing_extensions==4.7.1 --upgrade
       - name: fix pytest name
@@ -45,16 +47,15 @@ jobs:
           git clone https://github.com/aiplan4eu/up-pyperplan
           python3 -m pip install up-pyperplan/
           pip install unified_planning[tamer]
-      - name: check path
-        run: ls -la
-      - name: Create custom repos
-        run: cp upf.repos /tmp/all.repos
+      - name: Print GITHUB_WORKSPACE
+        run: echo "El directorio de trabajo es ${{ env.GITHUB_WORKSPACE }}"
+      - name: List repository files
+        run: ls -la $GITHUB_WORKSPACE
       - name: build and test
         uses: ros-tooling/action-ros-ci@0.3.15
         with:
           package-name: upf4ros2 upf_msgs
           target-ros2-distro: humble
-          vcs-repo-file-url: /tmp/all.repos
           colcon-defaults: |
             {
               "test": {
