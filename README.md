@@ -1,6 +1,6 @@
 # UPF4ROS2
 
-[![main](https://github.com/igonzf/UPF4ROS2/actions/workflows/main.yaml/badge.svg)](https://github.com/igonzf/UPF4ROS2/actions/workflows/main.yaml)
+[![main](https://github.com/PlanSys2/UPF4ROS2/actions/workflows/main.yaml/badge.svg)](https://github.com/PlanSys2/UPF4ROS2/actions/workflows/main.yaml)
 
 This repository integrates the Unified Planning Framework (UPF) into the ROS 2 ecosystem, providing a modular and standardized solution for automated planning in robotic systems. This project is part of the European initiative AIPlan4EU, which aims to develop automated planning tools that are accessible and applicable across different engineering domains.
 
