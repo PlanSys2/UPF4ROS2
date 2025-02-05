@@ -47,6 +47,7 @@ from upf_msgs.srv import (
 )
 
 from upf_msgs.srv import PDDLPlanOneShot as PDDLPlanOneShotSrv
+from upf_msgs.srv import PlanOneShot as PlanOneShotSrv
 
 
 class UPF4ROS2Node(Node):
@@ -85,9 +86,11 @@ class UPF4ROS2Node(Node):
         self._set_initial_value = self.create_service(
             SetInitialValue, 'upf4ros2/srv/set_initial_value', self.set_initial_value)
         self._add_goal = self.create_service(
-            AddGoal, 'upf4ros2/srv/add_goal', self.add_goal)
+            AddGoal, 'upf4ros2/add_goal', self.add_goal)
         self._pddl_plan_one_shot_srv = self.create_service(
             PDDLPlanOneShotSrv, 'upf4ros2/srv/planOneShotPDDL', self.pddl_plan_one_shot)
+        self._plan_one_shot_srv = self.create_service(
+            PlanOneShotSrv, 'upf4ros2/srv/planOneShot', self.plan_one_shot)
 
     def get_problem(self, request, response):
         if request.problem_name not in self.problems:
@@ -126,8 +129,10 @@ class UPF4ROS2Node(Node):
         else:
             problem = self.problems[request.problem_name]
 
-            fluent = self._ros2_interface_reader.convert(request.fluent, problem)
-            value = self._ros2_interface_reader.convert(request.default_value, problem)
+            fluent = self._ros2_interface_reader.convert(
+                request.fluent, problem)
+            value = self._ros2_interface_reader.convert(
+                request.default_value, problem)
             problem.add_fluent(fluent, default_initial_value=value)
             response.success = True
         return response
@@ -139,7 +144,8 @@ class UPF4ROS2Node(Node):
         else:
             problem = self.problems[request.problem_name]
 
-            action = self._ros2_interface_reader.convert(request.action, problem)
+            action = self._ros2_interface_reader.convert(
+                request.action, problem)
             problem.add_action(action)
             response.success = True
         return response
@@ -151,7 +157,8 @@ class UPF4ROS2Node(Node):
         else:
             problem = self.problems[request.problem_name]
 
-            action = self._ros2_interface_reader.convert(request.object, problem)
+            action = self._ros2_interface_reader.convert(
+                request.object, problem)
             problem.add_object(action)
             response.success = True
 
@@ -164,7 +171,8 @@ class UPF4ROS2Node(Node):
         else:
             problem = self.problems[request.problem_name]
 
-            expression = self._ros2_interface_reader.convert(request.expression, problem)
+            expression = self._ros2_interface_reader.convert(
+                request.expression, problem)
             value = self._ros2_interface_reader.convert(request.value, problem)
             problem.set_initial_value(expression, value)
             response.success = True
@@ -178,17 +186,38 @@ class UPF4ROS2Node(Node):
             problem = self.problems[request.problem_name]
 
             if len(request.goal) > 0:
-                goal = self._ros2_interface_reader.convert(request.goal[0].goal, problem)
+                goal = self._ros2_interface_reader.convert(
+                    request.goal[0].goal, problem)
                 problem.add_goal(goal)
                 response.success = True
             elif len(request.goal_with_cost) > 0:
-                goal = self._ros2_interface_reader.convert(request.goal_with_cost[0].goal, problem)
+                goal = self._ros2_interface_reader.convert(
+                    request.goal_with_cost[0].goal, problem)
                 problem.add_goal(goal)
                 response.success = True
             else:
                 response.success = False
                 response.message = 'Goal is void'
         return response
+
+    def plan_one_shot(self, request, response):
+
+        upf_problem = self._ros2_interface_reader.convert(request.problem)
+
+        with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
+            result = planner.solve(upf_problem)
+            print('%s returned: %s' % (planner.name, result.plan))
+
+            if result.plan is not None:
+                response.plan_result = self._ros2_interface_writer.convert(
+                    result)
+                response.success = True
+                response.message = ''
+            else:
+                response.success = False
+                response.message = 'No plan found'
+
+            return response
 
     def pddl_plan_one_shot(self, request, response):
         domain_file = ''
@@ -207,7 +236,7 @@ class UPF4ROS2Node(Node):
             problem_file = request.plan_request.problem
 
         reader = PDDLReader()
-        
+
         try:
             upf_problem = reader.parse_problem(domain_file, problem_file)
         except Exception:
@@ -218,9 +247,10 @@ class UPF4ROS2Node(Node):
         with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
             result = planner.solve(upf_problem)
             print('%s returned: %s' % (planner.name, result.plan))
-            
-            if result.plan is not None: 
-                response.plan_result = self._ros2_interface_writer.convert(result)
+
+            if result.plan is not None:
+                response.plan_result = self._ros2_interface_writer.convert(
+                    result)
                 response.success = True
                 response.message = ''
             else:
@@ -250,10 +280,13 @@ class UPF4ROS2Node(Node):
 
         with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
             result = planner.solve(upf_problem)
-            print('%s returned: %s' % (planner.name, result.plan))
+            self.get_logger().info(
+                '%s returned: %s' %
+                (planner.name, result.plan))
 
             feedback_msg = PDDLPlanOneShot.Feedback()
-            feedback_msg.plan_result = self._ros2_interface_writer.convert(result)
+            feedback_msg.plan_result = self._ros2_interface_writer.convert(
+                result)
 
             goal_handle.publish_feedback(feedback_msg)
             goal_handle.succeed()
@@ -264,14 +297,18 @@ class UPF4ROS2Node(Node):
             return result
 
     def plan_one_shot_callback(self, goal_handle):
-        upf_problem = self._ros2_interface_reader.convert(goal_handle.request.plan_request.problem)
+        upf_problem = self._ros2_interface_reader.convert(
+            goal_handle.request.plan_request.problem)
 
         with OneshotPlanner(problem_kind=upf_problem.kind) as planner:
             result = planner.solve(upf_problem)
-            print('%s returned: %s' % (planner.name, result.plan))
+            self.get_logger().info(
+                '%s returned: %s' %
+                (planner.name, result.plan))
 
             feedback_msg = PlanOneShot.Feedback()
-            feedback_msg.plan_result = self._ros2_interface_writer.convert(result)
+            feedback_msg.plan_result = self._ros2_interface_writer.convert(
+                result)
 
             goal_handle.publish_feedback(feedback_msg)
             goal_handle.succeed()

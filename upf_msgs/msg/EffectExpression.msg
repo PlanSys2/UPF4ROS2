@@ -15,6 +15,7 @@ uint8 kind
 # Expression that must be of the STATE_VARIABLE kind.
 upf_msgs/Expression fluent
 upf_msgs/Expression value
+upf_msgs/Variable[] forall
 
 # Optional. If the effect is conditional, then the following field must be set.
 # In this case, the `effect` will only be applied if the `condition`` holds.

@@ -11,3 +11,6 @@ upf_msgs/LogMessage[] log_messages
 
 # Synthetic description of the engine that generated this message.
 string engine
+
+ValidationMetric[] metrics
+
