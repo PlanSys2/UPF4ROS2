@@ -48,7 +48,11 @@ jobs:
             python3-colcon-common-extensions \
             python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip && python3 -m pip install --user 'numpy<2' 'scipy>=1.10,<1.12' 'ConfigSpace==1.2.0' 'protobuf>=5' && python3 -m pip install --user typing_extensions==4.7.1 --upgrade
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip
+          python3 -m pip install --user --upgrade pip 'setuptools<80' wheel
+          python3 -m pip install --user 'numpy<2' 'scipy>=1.10,<1.12' 'ConfigSpace==1.2.0' 'protobuf>=5'
       - name: fix pytest name
         run: sudo ln -s /usr/bin/pytest-3 /usr/bin/pytest
       - name: Install unified planning from sources
@@ -56,13 +60,15 @@ jobs:
           git clone https://github.com/aiplan4eu/unified-planning.git
           cd unified-planning
           python3 -m pip install --user -r requirements.txt
-          python3 -m pip install --user -r dev-requirements.txt
           python3 -m pip install --user tarski[arithmetic]
           sudo apt install -y gringo
-          python3 -m pip install --user black==22.6.0
-          python3 -m black --check --exclude=unified_planning/grpc/generated/ .
-          python3 -m mypy unified_planning
-          python3 scripts/test_imports.py
+          if [ "${ACT:-}" != "true" ]; then
+            python3 -m pip install --user -r dev-requirements.txt
+            python3 -m pip install --user black==22.6.0
+            python3 -m black --check --exclude=unified_planning/grpc/generated/ .
+            python3 -m mypy unified_planning
+            python3 scripts/test_imports.py
+          fi
           cd ..
           git clone https://github.com/aiplan4eu/up-tamer
           python3 -m pip install --user up-tamer/
@@ -91,6 +97,7 @@ jobs:
             }
           colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/main/index.yaml
       - name: Codecov
+        if: ${{ env.ACT != 'true' }}
         uses: codecov/codecov-action@v7
         with:
           files: ros_ws/lcov/total_coverage.info
