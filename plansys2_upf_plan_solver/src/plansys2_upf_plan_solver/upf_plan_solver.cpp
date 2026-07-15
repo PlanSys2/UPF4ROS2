@@ -83,8 +83,7 @@ void UPFPlanSolver::configure(
   const std::string & plugin_name)
 {
   parameter_name_ = plugin_name + ".arguments";
-  lc_node_ = lc_node;
-  lc_node_->declare_parameter<std::string>(parameter_name_, "");
+  lc_node->declare_parameter<std::string>(parameter_name_, "");
   service_node_ = rclcpp::Node::make_shared(plugin_name + "_node");
 }
 

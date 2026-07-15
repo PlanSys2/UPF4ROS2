@@ -51,17 +51,17 @@ class UPF4ROS2DemoNode(Node):
             'upf4ros2/planOneShotPDDL')
 
         self._get_problem = self.create_client(
-            GetProblem, 'upf4ros2/get_problem')
+            GetProblem, 'upf4ros2/srv/get_problem')
         self._new_problem = self.create_client(
-            NewProblem, 'upf4ros2/new_problem')
+            NewProblem, 'upf4ros2/srv/new_problem')
         self._add_fluent = self.create_client(
-            AddFluent, 'upf4ros2/add_fluent')
+            AddFluent, 'upf4ros2/srv/add_fluent')
         self._add_action = self.create_client(
-            AddAction, 'upf4ros2/add_action')
+            AddAction, 'upf4ros2/srv/add_action')
         self._add_object = self.create_client(
-            AddObject, 'upf4ros2/add_object')
+            AddObject, 'upf4ros2/srv/add_object')
         self._set_initial_value = self.create_client(
-            SetInitialValue, 'upf4ros2/set_initial_value')
+            SetInitialValue, 'upf4ros2/srv/set_initial_value')
         self._add_goal = self.create_client(
             AddGoal, 'upf4ros2/add_goal')
         self._plan_one_shot_client_srv = self.create_client(
@@ -71,9 +71,13 @@ class UPF4ROS2DemoNode(Node):
         srv = NewProblem.Request()
         srv.problem_name = problem_name
 
+        self.get_logger().info(f'Creating new problem with name: {problem_name}...')
+
         self._new_problem.wait_for_service()
         self.future = self._new_problem.call_async(srv)
+        self.get_logger().info('Waiting for the problem to be created...')
         rclpy.spin_until_future_complete(self, self.future)
+        self.get_logger().info('Problem created!')
 
         self._problem_name = problem_name
         self.get_logger().info(
@@ -171,8 +175,10 @@ class UPF4ROS2DemoNode(Node):
         upf_goal = msgs.Goal()
         upf_goal.goal = self._ros2_interface_writer.convert(goal)
         srv.goal.append(upf_goal)
+        self.get_logger().info(f'Adding goal: {goal}')
 
         self._add_goal.wait_for_service()
+        self.get_logger().info('Waiting for the goal to be added...')
         self.future = self._add_goal.call_async(srv)
         rclpy.spin_until_future_complete(self, self.future)
 
@@ -258,10 +264,13 @@ def main(args=None):
 
     # test is the name of the problem for the demo
     upf4ros2_demo_node = UPF4ROS2DemoNode()
+    upf4ros2_demo_node.get_logger().info('Starting UPF4ROS2 demo node...')  
 
     upf4ros2_demo_node.new_problem('test')
     problem = upf4ros2_demo_node._ros2_interface_reader.convert(
         upf4ros2_demo_node.get_problem())
+
+    upf4ros2_demo_node.get_logger().info(f'{problem}')
 
     # usertype is the type of the fluent's object
     # usertype can be 'up:bool', 'up:integer', 'up:integer[]', 'up:real',

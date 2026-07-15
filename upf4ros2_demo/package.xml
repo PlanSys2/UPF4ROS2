@@ -11,6 +11,8 @@
   <depend>sensor_msgs</depend>
   <depend>geometry_msgs</depend>
   <depend>upf_msgs</depend>
+  <depend>plansys2_msgs</depend>
+  <depend>lifecycle_msgs</depend>
 
   <test_depend>ament_copyright</test_depend>
   <test_depend>ament_flake8</test_depend>

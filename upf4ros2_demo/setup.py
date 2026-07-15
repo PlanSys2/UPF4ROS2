@@ -23,7 +23,6 @@ setup(
     maintainer_email='igonzf06@estudiantes.unileon.es',
     description='ROS 2 Support for UPF',
     license='Apache License, Version 2.0',
-    tests_require=['pytest'],
     entry_points={
         'console_scripts': [
             'upf4ros2_demo1 = upf4ros2_demo.upf4ros2_demo1:main',
@@ -31,10 +30,15 @@ setup(
             'upf4ros2_demo1_bash = upf4ros2_demo.upf4ros2_demo1_bash:main',
             'upf4ros2_demo2 = upf4ros2_demo.upf4ros2_demo2:main',
             'upf4ros2_demo3 = upf4ros2_demo.upf4ros2_demo3:main',
+            'upf4ros2_demo3_replan = upf4ros2_demo.upf4ros2_demo3_replan:main',
             'upf4ros2_demo3_harvest = upf4ros2_demo.upf4ros2_demo3_harvest:main',
             'upf4ros2_navigation_action = upf4ros2_demo.upf4ros2_navigation_action:main',
             'upf4ros2_check_wp_action = upf4ros2_demo.upf4ros2_check_wp_action:main',
-            'upf4ros2_collect_action = upf4ros2_demo.upf4ros2_collect_action:main'
+            'upf4ros2_collect_action = upf4ros2_demo.upf4ros2_collect_action:main',
+            'plansys2_metrics_recorder = upf4ros2_demo.plansys2_metrics_recorder:main',
+            'plansys2_replanning_demo = upf4ros2_demo.plansys2_replanning_demo:main',
+            'plansys2_replanning_cases_demo = upf4ros2_demo.plansys2_replanning_cases_demo:main',
+            'plansys2_replanning_report = upf4ros2_demo.plansys2_replanning_report:main'
         ],
     },
 )
