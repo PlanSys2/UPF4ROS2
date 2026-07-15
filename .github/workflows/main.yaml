@@ -12,7 +12,9 @@ env:
   up_tamer_commit: "869e7ab06cf23c5541a47f46209159fd51d8021f"
   up_pyperplan_commit: "ac2b04d2d41c20b15f7c4143c19947f9704d1888"
   up_fast_downward_commit: "eb1f0d801e140fffbdd6c1eb2b13e483299ab240"
-  PYTHONPATH: ${{ github.workspace }}/ros_ws/install/upf_msgs/local/lib/python3.10/dist-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages
+  PYTHONUSERBASE: ${{ github.workspace }}/python_user_base
+  PYTHONPATH: ${{ github.workspace }}/ros_ws/install/upf_msgs/local/lib/python3.10/dist-packages:${{ github.workspace }}/python_user_base/lib/python3.10/site-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages
+  RMW_IMPLEMENTATION: rmw_fastrtps_cpp
 
 jobs:
   build-and-test:
@@ -46,27 +48,28 @@ jobs:
             python3-colcon-common-extensions \
             python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev
       - name: Install deps
-        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip && pip install 'ConfigSpace<1.0' && pip install typing_extensions==4.7.1 --upgrade
+        run: sudo apt-get update && sudo apt-get install -y wget python3-vcstool python3-pytest python3-colcon-coveragepy-result libfl-dev pip && python3 -m pip install --user 'numpy<2' 'scipy>=1.10,<1.12' 'ConfigSpace==1.2.0' 'protobuf>=5' && python3 -m pip install --user typing_extensions==4.7.1 --upgrade
       - name: fix pytest name
         run: sudo ln -s /usr/bin/pytest-3 /usr/bin/pytest
       - name: Install unified planning from sources
         run: |
           git clone https://github.com/aiplan4eu/unified-planning.git
           cd unified-planning
-          python3 -m pip install -r requirements.txt
-          python3 -m pip install -r dev-requirements.txt
-          python3 -m pip install tarski[arithmetic]
+          python3 -m pip install --user -r requirements.txt
+          python3 -m pip install --user -r dev-requirements.txt
+          python3 -m pip install --user tarski[arithmetic]
           sudo apt install -y gringo
-          python3 -m pip install black==22.6.0
+          python3 -m pip install --user black==22.6.0
           python3 -m black --check --exclude=unified_planning/grpc/generated/ .
           python3 -m mypy unified_planning
           python3 scripts/test_imports.py
           cd ..
           git clone https://github.com/aiplan4eu/up-tamer
-          python3 -m pip install up-tamer/
+          python3 -m pip install --user up-tamer/
           git clone https://github.com/aiplan4eu/up-pyperplan
-          python3 -m pip install up-pyperplan/
-          pip install unified_planning[tamer]
+          python3 -m pip install --user up-pyperplan/
+          python3 -m pip install --user unified_planning[tamer]
+          python3 -m pip install --user 'numpy<2' 'scipy>=1.10,<1.12' 'ConfigSpace==1.2.0' 'protobuf>=5'
       - name: Create custom repos
         run: cp upf.repos /tmp/all.repos
       - name: Initialize rosdep
