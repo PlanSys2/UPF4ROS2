@@ -12,7 +12,7 @@ env:
   up_tamer_commit: "869e7ab06cf23c5541a47f46209159fd51d8021f"
   up_pyperplan_commit: "ac2b04d2d41c20b15f7c4143c19947f9704d1888"
   up_fast_downward_commit: "eb1f0d801e140fffbdd6c1eb2b13e483299ab240"
-  PYTHONPATH: /opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages
+  PYTHONPATH: ${{ github.workspace }}/ros_ws/install/upf_msgs/local/lib/python3.10/dist-packages:/opt/ros/humble/local/lib/python3.10/dist-packages:/opt/ros/humble/lib/python3.10/site-packages
 
 jobs:
   build-and-test:
