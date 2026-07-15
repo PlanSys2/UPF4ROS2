@@ -18,7 +18,7 @@ jobs:
     runs-on: ubuntu-22.04
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Set up ROS 2 sources and key
         run: |
           sudo apt-get update
@@ -73,7 +73,7 @@ jobs:
           sudo rosdep init || true
           rosdep update
       - name: build and test
-        uses: ros-tooling/action-ros-ci@0.2.5
+        uses: ros-tooling/action-ros-ci@0.4.8
         with:
           package-name: upf4ros2 upf_msgs
           target-ros2-distro: humble
@@ -86,9 +86,9 @@ jobs:
             }
           colcon-mixin-repository: https://raw.githubusercontent.com/colcon/colcon-mixin-repository/main/index.yaml
       - name: Codecov
-        uses: codecov/codecov-action@v1.2.1
+        uses: codecov/codecov-action@v7
         with:
-          file: ros_ws/lcov/total_coverage.info
+          files: ros_ws/lcov/total_coverage.info
           flags: unittests
           name: codecov-umbrella
           # yml: ./codecov.yml
