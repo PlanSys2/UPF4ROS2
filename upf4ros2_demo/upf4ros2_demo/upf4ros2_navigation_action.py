@@ -53,7 +53,7 @@ class NavigationAction(Node):
             '/navigate_to_pose')
 
         self._set_initial_value = self.create_client(
-            SetInitialValue, 'upf4ros2/set_initial_value')
+            SetInitialValue, 'upf4ros2/srv/set_initial_value')
 
         self.create_service(
             CallAction, 'move', self.__execute_callback)
@@ -98,7 +98,11 @@ class NavigationAction(Node):
 
         srv.value = value
 
-        self._set_initial_value.wait_for_service()
+        if not self._set_initial_value.wait_for_service(timeout_sec=1.0):
+            self.get_logger().warn(
+                'upf4ros2/srv/set_initial_value is not available; skipping external problem state update')
+            return
+
         self.future = self._set_initial_value.call(srv)
 
         self.get_logger().info(
@@ -135,6 +139,7 @@ class NavigationAction(Node):
             self.get_logger().info("Goal to " + str(wp) + " done")
             self.set_initial_value(self._fluent, l1, False)
             self.set_initial_value(self._fluent, l2, True)
+
             response.result = True
         else:
             self.get_logger().info("Goal to " + str(wp) + " was rejected!")
@@ -148,9 +153,13 @@ def main(args=None):
 
     navigation_action = NavigationAction()
 
-    navigation_action.join_spin()
+    try:
+        navigation_action.join_spin()
+    except KeyboardInterrupt:
+        pass
 
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

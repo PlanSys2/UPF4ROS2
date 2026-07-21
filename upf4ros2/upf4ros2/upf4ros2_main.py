@@ -324,10 +324,14 @@ def main(args=None):
 
     upf4ros2_node = UPF4ROS2Node()
 
-    rclpy.spin(upf4ros2_node)
+    try:
+        rclpy.spin(upf4ros2_node)
+    except KeyboardInterrupt:
+        pass
 
     upf4ros2_node.destroy_node()
-    rclpy.shutdown()
+    if rclpy.ok():
+        rclpy.shutdown()
 
 
 if __name__ == '__main__':

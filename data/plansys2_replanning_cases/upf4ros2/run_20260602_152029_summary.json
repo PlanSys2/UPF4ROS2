@@ -1,0 +1,121 @@
+{
+  "active_goals": [
+    "room"
+  ],
+  "attempted_action_trace": [
+    "(move livingroom kitchen)",
+    "(move kitchen gym)",
+    "(move kitchen bedroom)",
+    "(move bedroom room)"
+  ],
+  "attempted_actions": 4,
+  "blocked_edge": [
+    "kitchen",
+    "gym"
+  ],
+  "blocked_locations": [],
+  "changed_goals": [
+    "room"
+  ],
+  "configured_blocked_edge": [
+    "kitchen",
+    "gym"
+  ],
+  "configured_blocked_edge_used": false,
+  "disruption_action": "(move kitchen bedroom)",
+  "disruption_action_index": 3,
+  "disturbance_trigger": "on_second_action_attempt",
+  "events_file": "/tmp/plansys2_replanning_cases_demo/upf4ros2/run_20260602_152029_events.jsonl",
+  "execution_disruption_detected": true,
+  "failed_action_trace": [
+    "(move kitchen gym)"
+  ],
+  "failed_actions": 1,
+  "failure_reason": "",
+  "final_plan_length": 1,
+  "final_plan_unit_action_cost": 1,
+  "goal_achievement_ratio": 1.0,
+  "goal_change_applied": true,
+  "goals": [
+    "room"
+  ],
+  "goals_achieved": [
+    "room"
+  ],
+  "goals_unachieved": [],
+  "initial_goals": [
+    "bedroom",
+    "gym"
+  ],
+  "initial_plan_length": 4,
+  "initial_plan_unit_action_cost": 4,
+  "mission_time_s": 118.372847954,
+  "pipeline": "plansys2_upf4ros2",
+  "plan_history": [
+    {
+      "actions": [
+        "(move livingroom kitchen)",
+        "(move kitchen gym)",
+        "(move gym kitchen)",
+        "(move kitchen bedroom)"
+      ],
+      "plan_length": 4,
+      "planning_time_s": 0.762839014,
+      "reason": "initial"
+    },
+    {
+      "actions": [
+        "(move kitchen bedroom)",
+        "(move bedroom room)",
+        "(move room gym)"
+      ],
+      "plan_length": 3,
+      "planning_time_s": 0.074867047,
+      "reason": "replan_1"
+    },
+    {
+      "actions": [
+        "(move bedroom room)"
+      ],
+      "plan_length": 1,
+      "planning_time_s": 0.085772685,
+      "reason": "replan_2"
+    }
+  ],
+  "plan_quality_metric": "unit_action_count",
+  "planning_time_initial_s": 0.762839014,
+  "planning_time_total_s": 0.923478746,
+  "recovery_success_after_disruption": true,
+  "replan_plan_lengths": [
+    3,
+    1
+  ],
+  "replan_plan_unit_action_costs": [
+    3,
+    1
+  ],
+  "replanning_case": "both",
+  "replanning_latency_s": 0.074867047,
+  "replanning_time_mean_s": 0.080319866,
+  "replanning_triggered": true,
+  "replans": 2,
+  "run_id": "run_20260602_152029",
+  "scenario": "plansys2_combined_replanning",
+  "state_at_disruption": {
+    "current_location": "bedroom",
+    "visited": [
+      "bedroom",
+      "kitchen",
+      "livingroom"
+    ]
+  },
+  "success": true,
+  "successful_action_trace": [
+    "(move livingroom kitchen)",
+    "(move kitchen bedroom)",
+    "(move bedroom room)"
+  ],
+  "successful_actions": 3,
+  "total_generated_plan_actions": 8,
+  "valid_replanning_trial": true
+}

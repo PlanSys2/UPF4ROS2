@@ -32,7 +32,6 @@ private:
   using PDDLPlanOneShot = upf_msgs::action::PDDLPlanOneShot;
 
   std::string parameter_name_;
-  rclcpp_lifecycle::LifecycleNode::SharedPtr lc_node_;
   rclcpp::Node::SharedPtr service_node_;
 
   plansys2_msgs::msg::Plan convert(const upf_msgs::msg::Plan & plan);

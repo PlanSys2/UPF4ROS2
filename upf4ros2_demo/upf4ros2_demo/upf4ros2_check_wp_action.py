@@ -41,7 +41,7 @@ class CheckWpAction(Node):
         self._get_problem = self.create_client(
             GetProblem, 'upf4ros2/get_problem')
         self._set_initial_value = self.create_client(
-            SetInitialValue, 'upf4ros2/set_initial_value')
+            SetInitialValue, 'upf4ros2/srv/set_initial_value')
 
         self.create_service(
             CallAction, 'check_wp', self.__execute_callback)

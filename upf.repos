@@ -1,4 +1,8 @@
 repositories:
+  simple_node:
+    type: git
+    url: https://github.com/uleroboticsgroup/simple_node.git
+    version: main
   unified-planning:
     type: git
     url: https://github.com/aiplan4eu/unified-planning.git

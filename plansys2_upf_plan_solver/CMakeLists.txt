@@ -42,6 +42,8 @@ install(FILES plansys2_upf_plan_solver_plugin.xml
   DESTINATION share/${PROJECT_NAME}
 )
 
+
+
 install(TARGETS
   ${PROJECT_NAME}
   ARCHIVE DESTINATION lib
