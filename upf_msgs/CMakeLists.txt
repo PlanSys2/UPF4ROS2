@@ -1,6 +1,6 @@
-project(upf_msgs)
-
 cmake_minimum_required(VERSION 3.5)
+
+project(upf_msgs)
 
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
