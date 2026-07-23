@@ -30,8 +30,9 @@ from typing import (
 
 from unified_planning import Environment
 from unified_planning import model
-from unified_planning.exceptions import UPException, UPValueError
 from unified_planning import shortcuts
+from unified_planning.engines.results import PlanGenerationResultStatus
+from unified_planning.exceptions import UPException, UPValueError
 from unified_planning.model import (
     DurativeAction,
     Effect,
@@ -45,9 +46,8 @@ from unified_planning.model import metrics
 from unified_planning.model.effect import EffectKind
 from unified_planning.model.operators import OperatorKind
 import unified_planning.plans
-from upf4ros2.converter import Converter, handles
 from unified_planning.plans.plan import PlanKind
-from unified_planning.engines.results import PlanGenerationResultStatus
+from upf4ros2.converter import Converter, handles
 # from upf4ros2.ros2_utils import print_expr
 
 from upf_msgs import msg as msgs
@@ -367,7 +367,7 @@ class ROS2InterfaceReader(Converter):
 
             else:
                 raise ValueError(
-                    f"Unknown subtask type: {type(subtask.task)}")
+                    f'Unknown subtask type: {type(subtask.task)}')
 
         return decomposition
 
@@ -383,18 +383,18 @@ class ROS2InterfaceReader(Converter):
 
             for item in expr.expressions:
                 var_name = item.type
-                container, kind = var_name.split(".")
+                container, kind = var_name.split('.')
                 activity = problem.get_activity(container)
 
-                if ".start" in var_name or ".end" in var_name:
-                    if kind == "start":
+                if '.start' in var_name or '.end' in var_name:
+                    if kind == 'start':
                         var = model.Timepoint(
                             model.TimepointKind.START, container)
-                    elif kind == "end":
+                    elif kind == 'end':
                         var = model.Timepoint(
                             model.TimepointKind.END, container)
                     else:
-                        raise ValueError(f"Invalid timepoint kind: {kind}")
+                        raise ValueError(f'Invalid timepoint kind: {kind}')
                 else:
                     var = activity.get_parameter(kind)
                     if var is None:
