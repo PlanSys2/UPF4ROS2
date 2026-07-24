@@ -23,6 +23,7 @@ from typing import Dict, List
 
 from unified_planning import model
 from unified_planning.engines import PlanGenerationResult
+from unified_planning.environment import get_environment
 from unified_planning.exceptions import UPException
 import unified_planning.model.htn
 from unified_planning.model.operators import (
@@ -33,7 +34,6 @@ from unified_planning.model.operators import (
 )
 from unified_planning.model.timing import TimepointKind
 from unified_planning.model.types import domain_item, domain_size
-from unified_planning.environment import get_environment
 import unified_planning.model.walkers as walkers
 from upf4ros2.converter import Converter, handles
 # from upf4ros2.ros2_utils import print_expr
@@ -691,11 +691,11 @@ class ROS2InterfaceWriter(Converter):
 
             if isinstance(var, model.Timepoint):
                 if var.kind == TimepointKind.START:
-                    var = f"{var.container}.start"
+                    var = f'{var.container}.start'
                 elif var.kind == TimepointKind.END:
-                    var = f"{var.container}.end"
+                    var = f'{var.container}.end'
                 else:
-                    raise ValueError(f"Invalid timepoint in assignment: {var}")
+                    raise ValueError(f'Invalid timepoint in assignment: {var}')
             else:
                 assert isinstance(var, model.Parameter)
                 var = var.name
@@ -892,7 +892,7 @@ class ROS2InterfaceWriter(Converter):
         elif isinstance(plan._flat_plan, unified_planning.plans.TimeTriggeredPlan):
             ret = self._convert_time_triggered_plan(plan._flat_plan)
         else:
-            raise UPException(f"Unknown plan: {type(plan._flat_plan)}")
+            raise UPException(f'Unknown plan: {type(plan._flat_plan)}')
 
         ret.kind = 6
         return ret

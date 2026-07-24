@@ -10,7 +10,17 @@
   <buildtool_depend>ament_cmake</buildtool_depend>
 
   <depend>builtin_interfaces</depend>
-  <depend>rosidl_default_generators</depend>
+  <build_depend>rosidl_cmake</build_depend>
+  <build_depend>rosidl_generator_c</build_depend>
+  <build_depend>rosidl_generator_cpp</build_depend>
+  <build_depend>rosidl_generator_py</build_depend>
+  <build_depend>rosidl_typesupport_c</build_depend>
+  <build_depend>rosidl_typesupport_cpp</build_depend>
+  <build_depend>rosidl_typesupport_fastrtps_c</build_depend>
+  <build_depend>rosidl_typesupport_fastrtps_cpp</build_depend>
+  <build_depend>rosidl_typesupport_introspection_c</build_depend>
+  <build_depend>rosidl_typesupport_introspection_cpp</build_depend>
+  <exec_depend>rosidl_default_runtime</exec_depend>
 
   <member_of_group>rosidl_interface_packages</member_of_group>
 

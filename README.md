@@ -181,7 +181,7 @@ For run this demo I used the simulated Leo Rover robot in Gazebo Ignition Fortre
 | Demo 2           | UPF4ROS2 | 0.18429     | 0.1816        | 0.00868    | 0.1771 | 0.2035 | 10       |
 | Demo 3           | UPF      | 0.04703     | 0.0466        | 0.0013     | 0.0454 | 0.0498 | 10       |
 | Demo 3           | UPF4ROS2 | 0.22318     | 0.2258        | 0.02218    | 0.1767 | 0.2592 | 10       |
-| Demo 3 - Harvest | UPF      | 0.18        | 0.04965       | 0.0048     | 0.0482 | 0.064  | 10       |
+| Demo 3 - Harvest | UPF      | 0.0513      | 0.04965       | 0.0048     | 0.0482 | 0.064  | 10       |
 | Demo 3 - Harvest | UPF4ROS2 | 0.30883     | 0.31305       | 0.05294    | 0.1778 | 0.3678 | 10       |
 
 ## Acknowledgments
