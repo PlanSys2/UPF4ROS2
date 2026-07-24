@@ -4,7 +4,16 @@ project(upf_msgs)
 
 find_package(ament_cmake REQUIRED)
 find_package(builtin_interfaces REQUIRED)
-find_package(rosidl_default_generators REQUIRED)
+find_package(rosidl_cmake REQUIRED)
+find_package(rosidl_generator_c REQUIRED)
+find_package(rosidl_generator_cpp REQUIRED)
+find_package(rosidl_generator_py REQUIRED)
+find_package(rosidl_typesupport_c REQUIRED)
+find_package(rosidl_typesupport_cpp REQUIRED)
+find_package(rosidl_typesupport_fastrtps_c REQUIRED)
+find_package(rosidl_typesupport_fastrtps_cpp REQUIRED)
+find_package(rosidl_typesupport_introspection_c REQUIRED)
+find_package(rosidl_typesupport_introspection_cpp REQUIRED)
 
 rosidl_generate_interfaces(${PROJECT_NAME}
   "msg/AbstractTaskDeclaration.msg"
